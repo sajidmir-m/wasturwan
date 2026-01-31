@@ -252,17 +252,60 @@ CREATE POLICY "Admins can manage contacts"
   USING (is_admin());
 
 -- Bookings policies
+-- Policy 1: Allow anyone (including anonymous users) to INSERT bookings
 CREATE POLICY "Public can create bookings"
   ON public.bookings FOR INSERT
+  TO anon, authenticated
   WITH CHECK (true);
 
+-- Policy 2: Allow authenticated users to view their own bookings
 CREATE POLICY "Users can view own bookings"
   ON public.bookings FOR SELECT
-  USING (auth.uid() = user_id OR is_admin());
+  TO authenticated
+  USING (auth.uid() = user_id);
 
-CREATE POLICY "Admins can manage bookings"
-  ON public.bookings FOR ALL
-  USING (is_admin());
+-- Policy 3: Allow admins to view all bookings (for admin panel)
+CREATE POLICY "Admins can view all bookings"
+  ON public.bookings FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE id = auth.uid() 
+      AND role = 'admin'
+    )
+  );
+
+-- Policy 4: Allow admins to UPDATE bookings
+CREATE POLICY "Admins can update bookings"
+  ON public.bookings FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE id = auth.uid() 
+      AND role = 'admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE id = auth.uid() 
+      AND role = 'admin'
+    )
+  );
+
+-- Policy 5: Allow admins to DELETE bookings
+CREATE POLICY "Admins can delete bookings"
+  ON public.bookings FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE id = auth.uid() 
+      AND role = 'admin'
+    )
+  );
 
 -- Reviews policies
 CREATE POLICY "Public can view approved reviews"
