@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { ArrowRight, Clock, Star, Sparkles, Loader2 } from "lucide-react"
+import { ArrowRight, Clock, Star, Sparkles, Loader2, MapPin } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -49,7 +49,7 @@ export default function FeaturedPackages() {
   return (
     <section className="py-28 bg-gradient-to-b from-white to-slate-50/50 overflow-hidden">
       <div className="container mx-auto px-4 md:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
           <div className="max-w-2xl">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -73,20 +73,11 @@ export default function FeaturedPackages() {
               Journeys designed for the soul.
             </motion.h2>
           </div>
-          <Link href="/packages">
-            <Button 
-              variant="outline" 
-              className="rounded-full px-8 py-6 border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white transition-all duration-300 font-semibold text-base"
-            >
-              View All Journeys
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </Link>
         </div>
 
         {/* Horizontal Scroll Container */}
         <div className="relative">
-          <div className="flex gap-8 overflow-x-auto pb-12 snap-x snap-mandatory hide-scrollbar">
+          <div className="flex gap-6 overflow-x-auto pb-10 snap-x snap-mandatory hide-scrollbar">
             {packages.map((pkg, index) => (
               <motion.div
                 key={pkg.id}
@@ -94,10 +85,10 @@ export default function FeaturedPackages() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="min-w-[320px] md:min-w-[420px] snap-start"
+                className="min-w-[280px] md:min-w-[340px] lg:min-w-[360px] snap-start"
               >
                 <Link href={`/packages/${pkg.id}`} className="group block">
-                  <div className="relative h-[550px] w-full overflow-hidden rounded-3xl shadow-xl border border-slate-200/50 group-hover:shadow-2xl transition-all duration-500">
+                  <div className="relative h-[430px] w-full overflow-hidden rounded-3xl shadow-xl border border-slate-200/50 group-hover:shadow-2xl transition-all duration-500">
                     <Image
                       src={pkg.image || pkg.main_image_url || "https://images.unsplash.com/photo-1595846519845-68e298c2edd8?q=80&w=2070&auto=format&fit=crop"}
                       alt={pkg.title || "Package"}
@@ -114,8 +105,8 @@ export default function FeaturedPackages() {
                       </div>
                     )}
 
-                    <div className="absolute bottom-0 left-0 right-0 p-8 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                      <div className="flex items-center gap-6 text-white/90 text-sm mb-4">
+                    <div className="absolute bottom-0 left-0 right-0 p-6 transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
+                      <div className="flex flex-wrap items-center gap-3 text-white/90 text-xs mb-3">
                         <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
                           <Clock className="w-4 h-4" />
                           <span className="font-medium">{pkg.days} Days / {pkg.nights} Nights</span>
@@ -124,13 +115,30 @@ export default function FeaturedPackages() {
                           <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
                           <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                           <span className="font-medium">{pkg.rating}</span>
-                        </div>
+                          </div>
+                        )}
+                        {pkg.location && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {pkg.location
+                              .split(",")
+                              .map((tag: string) => tag.trim())
+                              .filter(Boolean)
+                              .slice(0, 3)
+                              .map((tag: string) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-1 rounded-full bg-white/15 text-[10px] font-medium uppercase tracking-wide"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                          </div>
                         )}
                       </div>
-                      <h3 className="text-3xl font-serif font-bold text-white mb-3 leading-snug">
+                      <h3 className="text-2xl font-serif font-bold text-white mb-2 leading-snug">
                         {pkg.title}
                       </h3>
-                      <div className="flex items-center justify-between mt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                      <div className="flex items-center justify-between mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
                         <div>
                           <p className="text-white/80 text-sm font-medium">Starting from</p>
                           <p className="text-white text-2xl font-bold">₹{Number(pkg.price).toLocaleString()}</p>

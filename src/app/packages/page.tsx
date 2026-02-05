@@ -9,9 +9,13 @@ import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { getJourneys } from "@/lib/actions/journeys"
+import { useSearchParams } from "next/navigation"
 
 export default function PackagesPage() {
-  const [searchTerm, setSearchTerm] = useState("")
+  const searchParams = useSearchParams()
+  const initialPlace = searchParams.get("place") || ""
+
+  const [searchTerm, setSearchTerm] = useState(initialPlace)
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [packages, setPackages] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/journeys", label: "Journeys", icon: Package },
+  { href: "/admin/places", label: "Places", icon: Database },
   { href: "/admin/services", label: "Services", icon: Briefcase },
   { href: "/admin/contacts", label: "Contact Inquiries", icon: Mail },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },
@@ -25,7 +26,7 @@ export default function AdminSidebar() {
             <Sparkles className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-serif font-bold text-white">Khaleej Admin</h1>
+            <h1 className="text-xl font-serif font-bold text-white">Wasturwan Admin</h1>
             <p className="text-xs text-slate-400">Control Panel</p>
           </div>
         </Link>
@@ -64,7 +65,7 @@ export default function AdminSidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate">Admin User</p>
-            <p className="text-xs text-slate-400 truncate">admin@khaleej.com</p>
+            <p className="text-xs text-slate-400 truncate">admin@wasturwantravels.com</p>
           </div>
         </div>
         <form action="/admin/logout" method="post">

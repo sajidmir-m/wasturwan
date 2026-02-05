@@ -71,7 +71,7 @@ export default function ContactPage() {
             className="space-y-8"
           >
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200/50">
-              <h3 className="text-2xl font-bold mb-8 text-slate-900">Get in Touch</h3>
+              <h3 className="text-2xl font-bold mb-8 text-slate-900">Get in Touch with Wasturwan Travels</h3>
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shrink-0 shadow-lg">
@@ -79,7 +79,12 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-lg mb-1">Our Office</h4>
-                    <p className="text-slate-600">Srinagar, Kashmir, India - 190001</p>
+                    <p className="text-slate-600">
+                      Wasturwan Travels<br />
+                      Ground Floor, Pahal Brein<br />
+                      Nishat Road, Srinagar, J&amp;K<br />
+                      PIN: 191121
+                    </p>
                   </div>
                 </div>
                 
@@ -89,7 +94,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-lg mb-1">Phone & WhatsApp</h4>
-                    <p className="text-slate-600">+91 9906910747</p>
+                    <p className="text-slate-600">+91 7006594976</p>
                   </div>
                 </div>
 
@@ -99,7 +104,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-lg mb-1">Email</h4>
-                    <p className="text-slate-600">khaleejtourtravels@gmail.com</p>
+                    <p className="text-slate-600">wasturwantravels@gmail.com</p>
                   </div>
                 </div>
               </div>
@@ -109,11 +114,11 @@ export default function ContactPage() {
               whileHover={{ scale: 1.02 }}
               className="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-3xl shadow-2xl text-white"
             >
-              <h3 className="text-2xl font-bold mb-4">Plan Your Trip Today</h3>
+              <h3 className="text-2xl font-bold mb-4">Plan Your Kashmir Journey Today</h3>
               <p className="text-blue-100 mb-6 text-lg leading-relaxed">
-                Ready to explore Kashmir? Contact us for custom packages and best deals.
+                Ready to explore Jammu &amp; Kashmir? Contact us for custom packages and best deals.
               </p>
-              <a href="https://wa.me/919906910747" target="_blank" rel="noopener noreferrer">
+              <a href="https://wa.me/917006594976" target="_blank" rel="noopener noreferrer">
                 <Button className="w-full bg-white text-blue-700 hover:bg-blue-50 h-12 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
                   Chat on WhatsApp
                 </Button>

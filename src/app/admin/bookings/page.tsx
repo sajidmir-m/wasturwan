@@ -156,7 +156,7 @@ export default function BookingsAdminPage() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="text-slate-500 mb-1">Contact</p>
                           <p className="text-slate-900 font-medium">{booking.phone}</p>
@@ -165,6 +165,10 @@ export default function BookingsAdminPage() {
                         <div>
                           <p className="text-slate-500 mb-1">Total Amount</p>
                           <p className="text-2xl font-bold text-blue-600">₹{booking.totalAmount?.toLocaleString() || '0'}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500 mb-1">Customer No.</p>
+                          <p className="text-slate-900 font-medium">{booking.persons}</p>
                         </div>
                       </div>
                       {booking.message && (

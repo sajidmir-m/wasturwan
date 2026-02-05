@@ -153,7 +153,7 @@ export default function AdminLoginPage() {
               </div>
             </div>
             <CardTitle className="text-3xl font-serif font-bold">Admin Login</CardTitle>
-            <p className="text-blue-100 mt-2">Khaleej Tour and Travel</p>
+            <p className="text-blue-100 mt-2">Wasturwan Travels</p>
           </CardHeader>
           <CardContent className="p-8">
             <form onSubmit={handleLogin} className="space-y-6">
@@ -172,7 +172,7 @@ export default function AdminLoginPage() {
                 </label>
                 <Input
                   type="email"
-                  placeholder="admin@khaleej.com"
+                  placeholder="admin@wasturwantravels.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

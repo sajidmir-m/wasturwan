@@ -26,25 +26,25 @@ export default function Footer() {
             className="space-y-6"
           >
             <Link href="/" className="inline-flex items-center space-x-2 group">
-              <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-white shadow-lg border border-white/20">
+              <div className="relative w-11 h-11 rounded-2xl overflow-hidden bg-white shadow-lg border border-white/20">
                 <Image
-                  src="/logo.jpeg"
-                  alt="Khaleej Tour and Travel"
+                  src="/log.jpeg"
+                  alt="Wasturwan Travels"
                   fill
                   className="object-contain p-1"
                   priority
                 />
               </div>
               <span className="text-3xl font-serif font-bold text-white tracking-tight group-hover:text-blue-400 transition-colors">
-                Khaleej<span className="text-blue-400">.</span>
+                Wasturwan<span className="text-blue-400"> Travels</span>
               </span>
             </Link>
             <p className="text-slate-300 leading-relaxed max-w-sm text-base">
-              Crafting premium travel experiences in Kashmir since 2012 . We believe in journeys that touch the soul and respect the land.
+              Wasturwan Travels - your Kashmir tourism specialist. Your journey begins here, with curated experiences across Jammu &amp; Kashmir.
             </p>
             <div className="flex space-x-3">
               <Link 
-                href="https://www.instagram.com/khaleejtravelcompany?igsh=OW01ZHpldWx1aTZ1" 
+                href="https://www.instagram.com/wasturwan_travels_?igsh=emJzNnY1YmNlY3F3" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-blue-600 transition-all duration-300 hover:scale-110 border border-white/10"
@@ -52,15 +52,20 @@ export default function Footer() {
                 <Instagram className="w-5 h-5" />
               </Link>
               <Link 
-                href="https://www.facebook.com/share/17z7D6Nc6A/" 
+                href="https://www.facebook.com/share/1CEFBaqrvr/" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-blue-600 transition-all duration-300 hover:scale-110 border border-white/10"
               >
                 <Facebook className="w-5 h-5" />
               </Link>
-              <Link href="#" className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-blue-600 transition-all duration-300 hover:scale-110 border border-white/10">
-                <Twitter className="w-5 h-5" />
+              <Link 
+                href="https://wa.me/917006594976" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-blue-600 transition-all duration-300 hover:scale-110 border border-white/10"
+              >
+                <Phone className="w-5 h-5" />
               </Link>
             </div>
           </motion.div>
@@ -107,22 +112,22 @@ export default function Footer() {
             <h3 className="text-lg font-bold mb-6 font-serif text-white">Destinations</h3>
             <ul className="space-y-4">
               <li>
-                <Link href="#" className="text-slate-300 hover:text-blue-400 transition-colors text-base">
+                <Link href="/places?place=Srinagar" className="text-slate-300 hover:text-blue-400 transition-colors text-base">
                   Srinagar
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-slate-300 hover:text-blue-400 transition-colors text-base">
+                <Link href="/places?place=Gulmarg" className="text-slate-300 hover:text-blue-400 transition-colors text-base">
                   Gulmarg
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-slate-300 hover:text-blue-400 transition-colors text-base">
+                <Link href="/places?place=Pahalgam" className="text-slate-300 hover:text-blue-400 transition-colors text-base">
                   Pahalgam
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-slate-300 hover:text-blue-400 transition-colors text-base">
+                <Link href="/places?place=Sonamarg" className="text-slate-300 hover:text-blue-400 transition-colors text-base">
                   Sonamarg
                 </Link>
               </li>
@@ -142,19 +147,24 @@ export default function Footer() {
                 <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center shrink-0 mt-0.5">
                   <MapPin className="w-5 h-5 text-blue-400" />
                 </div>
-                <span className="text-base leading-relaxed">Main Road, Dal Gate,<br />Srinagar, Kashmir 190001</span>
+                <span className="text-base leading-relaxed">
+                  Wasturwan Travels<br />
+                  Ground Floor, Pahal Brein<br />
+                  Nishat Road, Srinagar, J&amp;K<br />
+                  PIN: 191121
+                </span>
               </li>
               <li className="flex items-center gap-3 text-slate-300">
                 <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center shrink-0">
                   <Phone className="w-5 h-5 text-blue-400" />
                 </div>
-                <span className="text-base">+91 99069 10747</span>
+                <span className="text-base">+91 70065 94976</span>
               </li>
               <li className="flex items-center gap-3 text-slate-300">
                 <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center shrink-0">
                   <Mail className="w-5 h-5 text-blue-400" />
                 </div>
-                <span className="text-base">khaleejtourtravels@gmail.com</span>
+                <span className="text-base">wasturwantravels@gmail.com</span>
               </li>
             </ul>
           </motion.div>
@@ -162,7 +172,7 @@ export default function Footer() {
 
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-slate-400 text-sm">
-            © 2012 Khaleej Tour and Travel. All rights reserved.
+            © {new Date().getFullYear()} Wasturwan Travels. All rights reserved.
           </p>
           <div className="flex space-x-6 text-sm text-slate-400">
             <Link href="#" className="hover:text-blue-400 transition-colors">Privacy Policy</Link>

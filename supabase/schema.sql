@@ -387,6 +387,44 @@ CREATE INDEX idx_reviews_approved ON public.reviews(approved);
 CREATE INDEX idx_contacts_status ON public.contacts(status);
 
 -- ============================================
+-- STEP 10: PLACES TABLE (OPTIONAL FEATURE)
+-- ============================================
+
+-- Places table for managing destinations (admin + public)
+CREATE TABLE IF NOT EXISTS public.places (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE,
+  region TEXT,
+  description TEXT,
+  image_url TEXT,
+  status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active' NOT NULL,
+  ordering INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE public.places ENABLE ROW LEVEL SECURITY;
+
+-- Trigger to auto-update updated_at for places
+CREATE TRIGGER IF NOT EXISTS update_places_updated_at
+  BEFORE UPDATE ON public.places
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Places policies
+CREATE POLICY IF NOT EXISTS "Public can view places"
+  ON public.places FOR SELECT
+  USING (status = 'active' OR is_admin());
+
+CREATE POLICY IF NOT EXISTS "Admins can manage places"
+  ON public.places FOR ALL
+  USING (is_admin());
+
+CREATE INDEX IF NOT EXISTS idx_places_status ON public.places(status);
+CREATE INDEX IF NOT EXISTS idx_places_region ON public.places(region);
+
+-- ============================================
 -- INITIALIZATION COMPLETE
 -- ============================================
 -- Your database is now ready!

@@ -9,7 +9,7 @@ const testimonials = [
     id: 1,
     name: "Aisha & Rahul",
     location: "Mumbai",
-    text: "We wanted something more than just sightseeing. Khaleej gave us a journey. The houseboat stay was magical, but the local guides made it unforgettable.",
+    text: "We wanted something more than just sightseeing. Wasturwan Travels gave us a journey. The houseboat stay was magical, but the local guides made it unforgettable.",
     image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=2459&auto=format&fit=crop"
   },
   {

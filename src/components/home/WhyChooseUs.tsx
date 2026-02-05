@@ -1,31 +1,32 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Shield, Clock, Heart, Users, Sparkles } from "lucide-react"
+import { Shield, Clock, Heart, Users, Sparkles, Mountain, Waves, MapPin, Instagram, Facebook } from "lucide-react"
+import Image from "next/image"
 
 const features = [
   {
     icon: Users,
-    title: "Local Experts",
-    description: "Our team consists of locals who know Kashmir inside out, ensuring authentic experiences.",
+    title: "Local Mountain Guides",
+    description: "Travel with local experts who know every hidden meadow, ski slope and trekking trail across Jammu & Kashmir.",
     color: "from-blue-500 to-blue-600"
   },
   {
-    icon: Clock,
-    title: "24/7 Support",
-    description: "We are available round the clock to assist you during your journey.",
+    icon: Mountain,
+    title: "Adventure Planning",
+    description: "From skiing in Gulmarg to treks around Sonamarg and Doodhpathri, we plan safe and exciting adventures end‑to‑end.",
     color: "from-slate-500 to-slate-600"
   },
   {
-    icon: Shield,
-    title: "Best Price Guarantee",
-    description: "Luxury experiences at the most competitive market prices.",
+    icon: Waves,
+    title: "Rafting & Outdoor Experiences",
+    description: "Rafting, paragliding and outdoor activities arranged with trusted operators and proper safety gear.",
     color: "from-emerald-500 to-emerald-600"
   },
   {
     icon: Heart,
     title: "Custom Itineraries",
-    description: "Tailor-made packages designed specifically for your preferences and budget.",
+    description: "Build your own mix of Dal Lake stays, road trips, treks and spiritual routes with our tailor‑made itineraries.",
     color: "from-pink-500 to-pink-600"
   }
 ]
@@ -59,6 +60,35 @@ export default function WhyChooseUs() {
           <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
             We don't just sell tour packages; we craft unforgettable memories. Here is why travelers trust us.
           </p>
+          {/* Social proof icons */}
+          <div className="mt-8 flex items-center justify-center gap-6">
+            <a
+              href="https://www.instagram.com/wasturwan_travels_?igsh=emJzNnY1YmNlY3F3"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-3"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-500 via-red-500 to-yellow-400 flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform duration-300">
+                <Instagram className="w-7 h-7 text-white" />
+              </div>
+              <span className="hidden sm:inline text-sm font-semibold text-slate-700 group-hover:text-pink-600 transition-colors">
+                Follow us on Instagram
+              </span>
+            </a>
+            <a
+              href="https://www.facebook.com/share/1CEFBaqrvr/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-3"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-[#1877F2] flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform duration-300">
+                <Facebook className="w-7 h-7 text-white" />
+              </div>
+              <span className="hidden sm:inline text-sm font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
+                Connect on Facebook
+              </span>
+            </a>
+          </div>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -83,6 +113,72 @@ export default function WhyChooseUs() {
             </motion.div>
           ))}
         </div>
+
+        {/* Signature Experiences Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 justify-items-center"
+        >
+          {[
+            {
+              key: "dal",
+              title: "Houseboats, shikaras & starlit waters.",
+              badge: "Dal Lake Nights",
+              image: "/dal.png",
+              description:
+                "Sleep on traditional houseboats, wake up to misty mornings and glide under the stars on Dal Lake.",
+            },
+            {
+              key: "gulmarg",
+              title: "Ski slopes, snow trails & gondola views.",
+              badge: "Gulmarg Adventure",
+              image: "/1767803335038_1.jpeg",
+              description:
+                "Plan winter skiing or summer meadows in Gulmarg with lift passes and guides arranged end‑to‑end.",
+            },
+            {
+              key: "sonamarg",
+              title: "Golden meadows & glacier day trips.",
+              badge: "Sonamarg Meadows",
+              image: "/1767803650229.jpeg",
+              description:
+                "Ride through valleys of Sonamarg, walk to glaciers and spend your days between sunlit meadows and snow‑kissed peaks.",
+            },
+            {
+              key: "gurez-ladakh",
+              title: "Gurez valley to Ladakh high passes.",
+              badge: "Gurez & Ladakh Trails",
+              image: "/Lehladakh.jpeg",
+              description:
+                "Blend remote Gurez villages with Ladakh’s high‑altitude deserts for an unforgettable Himalayan circuit.",
+            },
+          ].map((card) => (
+            <div
+              key={card.key}
+              className="relative overflow-hidden rounded-3xl shadow-xl border border-slate-200/60 bg-slate-950 w-full sm:w-[320px] lg:w-[340px] mx-auto h-[380px] md:h-[420px] lg:h-[440px]"
+            >
+              <Image src={card.image} alt={card.badge} fill className="object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
+              <div className="relative z-10 p-4 sm:p-5 flex flex-col justify-center h-full">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 mb-2">
+                  <MapPin className="w-3 h-3 text-blue-200" />
+                  <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-blue-50">
+                    {card.badge}
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg md:text-xl font-serif font-semibold text-white mb-1">
+                  {card.title}
+                </h3>
+                <p className="text-[11px] sm:text-xs md:text-sm text-slate-100/85 max-w-md">
+                  {card.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </motion.div>
       </div>
     </section>
   )

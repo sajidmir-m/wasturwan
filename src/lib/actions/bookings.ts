@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function createBooking(formData: {
-  packageId: string
+  packageId?: string | null
+  packageLabel?: string | null
   name: string
   email: string
   phone: string
@@ -20,22 +21,40 @@ export async function createBooking(formData: {
       return { error: 'All required fields must be filled' }
     }
 
-    // Validate package exists
-    const { data: packageData, error: packageError } = await supabase
-      .from('packages')
-      .select('id, title')
-      .eq('id', formData.packageId)
-      .single()
+    // Work out which package to attach (by id or by label), if any.
+    let resolvedPackageId: string | null = formData.packageId ?? null
 
-    if (packageError || !packageData) {
-      return { error: 'Package not found' }
+    // If no explicit id but we have a label from the website form, try to find the package by title.
+    if (!resolvedPackageId && formData.packageLabel) {
+      const { data: pkg, error: pkgError } = await supabase
+        .from('packages')
+        .select('id, title')
+        .ilike('title', formData.packageLabel)
+        .maybeSingle()
+
+      if (!pkgError && pkg) {
+        resolvedPackageId = pkg.id
+      }
+    }
+
+    // If we have a package id at this point, validate that it exists.
+    if (resolvedPackageId) {
+      const { data: packageData, error: packageError } = await supabase
+        .from('packages')
+        .select('id, title')
+        .eq('id', resolvedPackageId)
+        .single()
+
+      if (packageError || !packageData) {
+        return { error: 'Package not found' }
+      }
     }
 
     // Insert booking
     const { data, error } = await supabase
       .from('bookings')
       .insert({
-        package_id: formData.packageId,
+        package_id: resolvedPackageId,
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
@@ -96,13 +115,29 @@ export async function getBookings() {
       return { data: null, error: error.message }
     }
 
-    // Transform data to include package name and calculate total amount
-    const transformedData = data?.map(booking => ({
-      ...booking,
-      packageName: booking.packages?.title || 'Package Not Found',
-      packagePrice: booking.packages?.price || 0,
-      totalAmount: (booking.packages?.price || 0) * booking.persons
-    })) || []
+    // Transform data to include package name and calculate total amount.
+    // If there is no linked package, keep name but mark as custom and leave amount as 0.
+    const transformedData = data?.map(booking => {
+      let packageName = booking.packages?.title as string | undefined
+      const packagePrice = booking.packages?.price || 0
+
+      if (!packageName) {
+        // Try to infer from the message if user came via the website booking form
+        if (booking.message && booking.message.includes('Preferred package:')) {
+          const match = booking.message.match(/Preferred package:\s*(.+)/)
+          if (match && match[1]) {
+            packageName = match[1].split('\n')[0].trim()
+          }
+        }
+      }
+
+      return {
+        ...booking,
+        packageName: packageName || 'Custom Booking',
+        packagePrice,
+        totalAmount: packagePrice * booking.persons
+      }
+    }) || []
 
     return { data: transformedData, error: null }
   } catch (err: any) {

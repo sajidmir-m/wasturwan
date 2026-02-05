@@ -3,15 +3,17 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Menu, X, Phone, Search, Sparkles } from "lucide-react"
+import { Menu, X, Phone, Search, Sparkles, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/packages", label: "Journeys" },
+  { href: "/packages", label: "Packages" },
   { href: "/services", label: "Services" },
+  { href: "/places", label: "Places" },
   { href: "/about", label: "Our Story" },
   { href: "/contact", label: "Contact" },
 ]
@@ -19,6 +21,7 @@ const navItems = [
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -28,39 +31,44 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Hide navbar entirely on admin routes
+  if (pathname?.startsWith("/admin")) {
+    return null
+  }
+
   return (
     <>
       <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ y: -40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 md:px-8 py-4",
-          scrolled ? "pt-4" : "pt-6"
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 md:px-8 py-3",
+          scrolled ? "pt-3" : "pt-5"
         )}
       >
-        <div 
+        <div
           className={cn(
             "max-w-7xl mx-auto rounded-2xl transition-all duration-300 backdrop-blur-xl border shadow-lg",
-            scrolled 
-              ? "bg-white/95 py-3 px-6 border-slate-200/50" 
-              : "bg-white/80 py-4 px-8 border-slate-200/30"
+            scrolled
+              ? "bg-white/95 py-2.5 px-5 border-slate-200/60"
+              : "bg-white/70 py-3.5 px-7 border-slate-200/40"
           )}
         >
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2 group">
-              <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-white shadow-lg group-hover:scale-110 transition-transform border border-slate-200">
+          <div className="flex items-center justify-between gap-4">
+            {/* Logo inside navbar panel - square icon + wordmark */}
+            <Link href="/" className="flex items-center space-x-3 group">
+              <div className="relative w-11 h-11 md:w-12 md:h-12 rounded-2xl overflow-hidden bg-white shadow-lg group-hover:scale-105 transition-transform border border-slate-200">
                 <Image
-                  src="/logo.jpeg"
-                  alt="Khaleej Tour and Travel"
+                  src="/log.jpeg"
+                  alt="Wasturwan Travels"
                   fill
                   className="object-contain p-1"
                   priority
                 />
               </div>
-              <span className="text-2xl font-serif font-bold text-slate-900 tracking-tight group-hover:text-blue-600 transition-colors">
-                Khaleej<span className="text-blue-600">.</span>
+              <span className="hidden sm:inline-block text-base md:text-lg font-serif font-bold text-slate-900 tracking-tight group-hover:text-blue-600 transition-colors">
+                Wasturwan<span className="text-blue-600"> Travels</span>
               </span>
             </Link>
 
@@ -70,7 +78,7 @@ export default function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="text-sm font-medium text-slate-700 hover:text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50/50 transition-all duration-200 uppercase tracking-wider"
+                  className="text-xs md:text-sm font-medium text-slate-700 hover:text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-50/50 transition-all duration-200 uppercase tracking-wider"
                 >
                   {item.label}
                 </Link>
@@ -78,13 +86,40 @@ export default function Navbar() {
             </div>
 
             {/* Actions */}
-            <div className="hidden md:flex items-center space-x-3">
+            <div className="hidden md:flex items-center space-x-2">
               <button className="p-2.5 hover:bg-slate-100 rounded-xl transition-colors">
                 <Search className="w-5 h-5 text-slate-600" />
               </button>
-              <Link href="/contact">
+              <a
+                href="tel:+917006594976"
+                className="hidden lg:inline-flex"
+                aria-label="Call Wasturwan Travels at +91 7006594976"
+              >
+                <Button
+                  variant="outline"
+                  className="rounded-full border-slate-300 text-slate-800 hover:bg-slate-900 hover:text-white transition-all duration-300 px-3 h-9 text-xs md:text-sm flex items-center gap-1.5"
+                >
+                  <Phone className="w-4 h-4" />
+                  Call
+                </Button>
+              </a>
+              <a
+                href="https://wa.me/917006594976"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Chat on WhatsApp with Wasturwan Travels"
+              >
+                <Button
+                  variant="outline"
+                  className="rounded-full border-emerald-500 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all duration-300 px-3 h-9 text-xs md:text-sm flex items-center gap-1.5"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  WhatsApp
+                </Button>
+              </a>
+              <Link href="/book">
                 <Button 
-                  className="rounded-full bg-slate-900 text-white hover:bg-blue-700 transition-all duration-300 px-6 shadow-md hover:shadow-lg hover:scale-105"
+                  className="rounded-full bg-slate-900 text-white hover:bg-blue-700 transition-all duration-300 px-5 h-10 text-xs md:text-sm shadow-md hover:shadow-lg hover:scale-105"
                 >
                   Book Now
                 </Button>
@@ -122,18 +157,18 @@ export default function Navbar() {
             >
               <div className="p-6 border-b border-slate-200">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-white border border-slate-200">
+                <div className="flex items-center space-x-2">
+                  <div className="relative w-10 h-10 overflow-hidden bg-white border border-slate-200">
                       <Image
-                        src="/logo.jpeg"
-                        alt="Khaleej Tour and Travel"
+                        src="/log.jpeg"
+                        alt="Wasturwan Travels"
                         fill
-                        className="object-contain p-0.5"
+                        className="object-contain"
                         priority
                       />
                     </div>
                     <span className="text-xl font-serif font-bold text-slate-900">
-                      Khaleej<span className="text-blue-600">.</span>
+                      Wasturwan<span className="text-blue-600"> Travels</span>
                     </span>
                   </div>
                   <button
@@ -155,13 +190,33 @@ export default function Navbar() {
                   {item.label}
                 </Link>
               ))}
-                <div className="pt-6 border-t border-slate-200 mt-4">
-                <Link href="/contact" onClick={() => setIsOpen(false)}>
-                    <Button className="w-full py-6 text-lg rounded-xl bg-slate-900 hover:bg-blue-700 shadow-lg">
-                    Plan Your Trip
-                  </Button>
-                </Link>
-              </div>
+                <div className="pt-6 border-t border-slate-200 mt-4 space-y-3">
+                  <a
+                    href="tel:+917006594976"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Button className="w-full py-3 text-base rounded-xl bg-slate-900 hover:bg-slate-800 shadow-lg flex items-center justify-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      Call Us
+                    </Button>
+                  </a>
+                  <a
+                    href="https://wa.me/917006594976"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Button className="w-full py-3 text-base rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg flex items-center justify-center gap-2">
+                      <MessageCircle className="w-4 h-4" />
+                      WhatsApp
+                    </Button>
+                  </a>
+                  <Link href="/book" onClick={() => setIsOpen(false)}>
+                    <Button className="w-full py-4 text-lg rounded-xl bg-slate-900 hover:bg-blue-700 shadow-lg mt-1">
+                      Plan Your Trip
+                    </Button>
+                  </Link>
+                </div>
             </div>
           </motion.div>
           </>

@@ -4,9 +4,9 @@ import { getJourneys } from '@/lib/actions/journeys'
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Get base URL from environment variable or use default
   // Make sure to set NEXT_PUBLIC_SITE_URL in your .env.local file
-  // Example: NEXT_PUBLIC_SITE_URL=https://khaleejtourandtravel.com
+  // Example: NEXT_PUBLIC_SITE_URL=https://wasturwantravels.com
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://khaleejtourandtravel.com')
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://wasturwantravels.com')
 
   // Static routes
   const staticRoutes: MetadataRoute.Sitemap = [

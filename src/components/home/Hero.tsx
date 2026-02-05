@@ -4,21 +4,20 @@ import { motion } from "framer-motion"
 import { ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import Image from "next/image"
-
 export default function Hero() {
   return (
     <section className="relative min-h-[95vh] flex items-center overflow-hidden">
-      {/* Background Image */}
+      {/* Background Video */}
       <div className="absolute inset-0 z-0">
-        <Image
-          src="/dallake.png"
-          alt="Kashmir Landscape"
-          fill
-          className="object-cover"
-          priority
-          quality={90}
-        />
+        <video
+          className="w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+        >
+          <source src="/hero.mp4" type="video/mp4" />
+        </video>
         {/* Dark overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
       </div>

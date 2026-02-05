@@ -18,8 +18,11 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: "Khaleej Tour and Travel | Experience Kashmir",
-  description: "Curated journeys through the paradise of Kashmir. Luxury tours, authentic experiences, and memories that last a lifetime.",
+  title: "Wasturwan Travels | Your Journey Begins Here",
+  description: "Kashmir and Jammu specialists offering curated tour packages, custom itineraries, and unforgettable experiences across Jammu & Kashmir.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

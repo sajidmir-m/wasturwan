@@ -12,8 +12,8 @@ export default function AboutPage() {
       {/* Hero */}
       <div className="relative h-[60vh] flex items-center justify-center overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1595846519845-68e298c2edd8?q=80&w=2070&auto=format&fit=crop"
-          alt="About Khaleej Travels"
+          src="/yasser-mir-iMnIu-GoEeE-unsplash-1.jpg"
+          alt="About Wasturwan Travels"
           fill
           className="object-cover"
         />
@@ -30,7 +30,7 @@ export default function AboutPage() {
               Our Story
             </span>
           </div>
-          <h1 className="text-6xl md:text-7xl font-serif font-bold mb-6">About Us</h1>
+          <h1 className="text-6xl md:text-7xl font-serif font-bold mb-6">About Wasturwan Travels</h1>
           <p className="text-xl md:text-2xl max-w-3xl mx-auto text-white/90">Discover the story behind Kashmir's premier travel agency.</p>
         </motion.div>
       </div>
@@ -46,10 +46,10 @@ export default function AboutPage() {
             <h2 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 mb-8">Our Mission & Vision</h2>
             <div className="space-y-6">
               <p className="text-lg text-slate-600 leading-relaxed">
-                At Khaleej Tour and Travel, our mission is to showcase the breathtaking beauty of Kashmir to the world. We believe in providing authentic, immersive, and luxurious experiences that go beyond standard sightseeing.
+                At Wasturwan Travels, our mission is to showcase the breathtaking beauty of Kashmir and Jammu to the world. We believe in providing authentic, immersive, and comfortable experiences that go beyond standard sightseeing.
               </p>
               <p className="text-lg text-slate-600 leading-relaxed">
-                Founded by a team of local experts, we have deep roots in the valley. This allows us to offer exclusive access to hidden gems, local culture, and the warmest hospitality that Kashmir is known for.
+                Founded by local experts, we have deep roots in the valley. This allows us to offer exclusive access to hidden gems, local culture, and the warm hospitality that Jammu &amp; Kashmir is known for.
               </p>
             </div>
             <div className="mt-10">
@@ -68,7 +68,7 @@ export default function AboutPage() {
             className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white"
           >
             <Image
-              src="https://images.unsplash.com/photo-1566837945700-30057527ade0?q=80&w=2070&auto=format&fit=crop"
+              src="/1767803735796.jpeg"
               alt="Kashmir Landscape"
               fill
               className="object-cover"
