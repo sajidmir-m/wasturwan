@@ -54,24 +54,44 @@ export async function createBooking(formData: {
       }
     }
 
-    // Insert booking
+    // Insert booking - user_id will be null for anonymous bookings
+    // The anonymous client ensures no auth session is used
+    const insertData = {
+      package_id: resolvedPackageId,
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      date: formData.date,
+      persons: parseInt(formData.persons.toString()),
+      message: formData.message?.trim() || null,
+      status: 'pending' as const,
+      // user_id is omitted - will default to null in database
+    }
+
     const { data, error } = await supabase
       .from('bookings')
-      .insert({
-        package_id: resolvedPackageId,
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        date: formData.date,
-        persons: parseInt(formData.persons.toString()),
-        message: formData.message?.trim() || null,
-        status: 'pending'
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (error) {
-      console.error('Error creating booking:', error)
+      // Enhanced error logging for debugging
+      console.error('Booking creation error:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        insertData,
+      })
+      
+      // Check for RLS-specific errors
+      if (error.code === '42501' || error.message?.includes('row-level security') || error.message?.includes('RLS')) {
+        console.error('RLS Policy Error - This indicates the Supabase RLS policy may not be correctly configured.')
+        return { 
+          error: 'Unable to submit booking. Please ensure all required fields are filled and try again.' 
+        }
+      }
+      
       return { error: error.message || 'Failed to create booking' }
     }
 

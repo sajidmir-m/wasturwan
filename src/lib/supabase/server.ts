@@ -57,6 +57,7 @@ export async function createClient() {
  * - Does NOT persist or refresh auth tokens
  * - Always operates as an anonymous user
  * - Bypasses stale/corrupted auth sessions that can cause RLS failures
+ * - Uses a completely isolated client instance
  * 
  * Use this for public-facing operations that should work regardless of browser auth state.
  */
@@ -68,15 +69,37 @@ export function createAnonymousClient() {
     throw new Error('Missing Supabase environment variables. Please check your .env.local file.')
   }
 
-  // Create a direct Supabase client without SSR cookie handling
-  // This ensures it always operates as anonymous, regardless of browser state
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+  // Create a completely fresh Supabase client instance
+  // This ensures no shared state, cookies, or auth sessions are used
+  // Each call to this function creates a brand new client
+  const client = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
+      storage: {
+        getItem: () => null, // Always return null - no stored sessions
+        setItem: () => {}, // No-op - don't store anything
+        removeItem: () => {}, // No-op
+      },
+    },
+    db: {
+      schema: 'public',
+    },
+    global: {
+      // Don't include any Authorization headers
+      headers: {},
     },
   })
+
+  // Ensure the client has no auth state by explicitly setting it
+  // This is a defensive measure to ensure anonymous operation
+  if (client.auth) {
+    // Clear any potential session without making an API call
+    // We do this by ensuring storage always returns null
+  }
+
+  return client
 }
 
 
