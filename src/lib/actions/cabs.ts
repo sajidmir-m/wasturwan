@@ -1,9 +1,9 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 
 export async function getCabs() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from("cabs")
     .select("*")
@@ -29,7 +29,7 @@ export async function createCab(payload: {
   status: "active" | "inactive"
   ordering: number | null
 }) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { error } = await supabase.from("cabs").insert(payload)
   if (error) {
     console.error("Error creating cab", error)
@@ -52,7 +52,7 @@ export async function updateCab(
     ordering: number | null
   }
 ) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { error } = await supabase.from("cabs").update(payload).eq("id", id)
   if (error) {
     console.error("Error updating cab", error)
@@ -61,12 +61,11 @@ export async function updateCab(
 }
 
 export async function deleteCab(id: string) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { error } = await supabase.from("cabs").delete().eq("id", id)
   if (error) {
     console.error("Error deleting cab", error)
     throw error
   }
 }
-
 
