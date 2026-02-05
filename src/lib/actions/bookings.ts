@@ -56,8 +56,7 @@ export async function createBooking(formData: {
       }
     }
 
-    // Use direct REST API call to ensure 100% anonymous request
-    // This bypasses all Supabase client auth mechanisms
+    // Prepare insert data
     const insertData = {
       package_id: resolvedPackageId,
       user_id: null, // Explicitly set to null for anonymous bookings
@@ -70,45 +69,73 @@ export async function createBooking(formData: {
       status: 'pending',
     }
 
-    // Direct REST API call with ONLY the anon key
-    // Using PostgREST format: apikey header + Authorization Bearer with anon key
-    const response = await fetch(`${supabaseUrl}/rest/v1/bookings?select=*`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseAnonKey,
-        'Authorization': `Bearer ${supabaseAnonKey}`,
-        'Prefer': 'return=representation',
-      },
-      body: JSON.stringify(insertData),
-    })
+    // Use anonymous client for booking creation
+    // The client is configured to always operate as anonymous
+    const anonymousSupabase = createAnonymousClient()
 
-    const responseData = await response.json()
+    // Attempt insert with anonymous client
+    // With the database properly configured, this should work
+    const { data, error } = await anonymousSupabase
+      .from('bookings')
+      .insert(insertData)
+      .select()
+      .single()
 
-    if (!response.ok) {
-      console.error('Booking creation error (REST API):', {
-        status: response.status,
-        statusText: response.statusText,
-        error: responseData,
+    if (error) {
+      // If RLS error persists, try direct REST API as fallback
+      if (error.code === '42501' || error.message?.includes('row-level security')) {
+        console.error('RLS error with Supabase client, trying direct REST API...')
+        
+        // Direct REST API call - ensure proper PostgREST format
+        const restUrl = `${supabaseUrl}/rest/v1/bookings`
+        const restResponse = await fetch(restUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Prefer': 'return=representation',
+            // Explicitly set role to anon
+            'X-Client-Info': 'supabase-js-anon',
+          },
+          body: JSON.stringify(insertData),
+        })
+
+        const restData = await restResponse.json()
+
+        if (!restResponse.ok) {
+          console.error('Both Supabase client and REST API failed:', {
+            clientError: error,
+            restError: restData,
+            restStatus: restResponse.status,
+            insertData,
+          })
+
+          // This is definitely an RLS policy issue at the database level
+          return { 
+            error: 'Booking submission failed. Please verify RLS policies allow anonymous inserts.' 
+          }
+        }
+
+        // REST API succeeded
+        const insertedData = Array.isArray(restData) ? restData[0] : restData
+        revalidatePath('/admin/bookings')
+        return { data: insertedData, error: null }
+      }
+
+      // Other errors
+      console.error('Booking creation error:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
         insertData,
       })
-
-      // Check for RLS-specific errors
-      if (response.status === 403 || responseData?.code === '42501' || responseData?.message?.includes('row-level security')) {
-        console.error('RLS Policy Error - Verify the policy allows INSERT for anon role')
-        return { 
-          error: 'Unable to submit booking. Please try again or contact support.' 
-        }
-      }
-
-      return { 
-        error: responseData?.message || responseData?.error_description || 'Failed to create booking' 
-      }
+      
+      return { error: error.message || 'Failed to create booking' }
     }
 
-    // Extract the inserted row (PostgREST returns array)
-    const data = Array.isArray(responseData) ? responseData[0] : responseData
-
+    // Success with Supabase client
     revalidatePath('/admin/bookings')
     return { data, error: null }
   } catch (err: any) {

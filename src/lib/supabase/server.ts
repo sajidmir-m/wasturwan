@@ -87,18 +87,16 @@ export function createAnonymousClient() {
       schema: 'public',
     },
     global: {
-      // Don't include any Authorization headers
-      headers: {},
+      // Explicitly set headers to ensure anonymous access
+      headers: {
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+      },
     },
   })
 
-  // Ensure the client has no auth state by explicitly setting it
-  // This is a defensive measure to ensure anonymous operation
-  if (client.auth) {
-    // Clear any potential session without making an API call
-    // We do this by ensuring storage always returns null
-  }
-
+  // Don't check or clear sessions - just return the client
+  // The storage always returns null, so no session can exist
   return client
 }
 
