@@ -13,10 +13,12 @@ export async function createBooking(formData: {
   persons: number
   message?: string
 }) {
-  // Use anonymous client for public booking creation
-  // This ensures RLS policies work consistently across all devices/browsers
-  // regardless of cached auth sessions
-  const supabase = createAnonymousClient()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return { error: 'Server configuration error. Please contact support.' }
+  }
 
   try {
     // Validate required fields
@@ -24,11 +26,11 @@ export async function createBooking(formData: {
       return { error: 'All required fields must be filled' }
     }
 
-    // Work out which package to attach (by id or by label), if any.
+    // Use anonymous client for package lookups only
+    const supabase = createAnonymousClient()
     let resolvedPackageId: string | null = formData.packageId ?? null
 
     // If no explicit id but we have a label from the website form, try to find the package by title.
-    // Use anonymous client for package lookup as well to ensure consistency
     if (!resolvedPackageId && formData.packageLabel) {
       const { data: pkg, error: pkgError } = await supabase
         .from('packages')
@@ -54,46 +56,58 @@ export async function createBooking(formData: {
       }
     }
 
-    // Insert booking - user_id will be null for anonymous bookings
-    // The anonymous client ensures no auth session is used
+    // Use direct REST API call to ensure 100% anonymous request
+    // This bypasses all Supabase client auth mechanisms
     const insertData = {
       package_id: resolvedPackageId,
+      user_id: null, // Explicitly set to null for anonymous bookings
       name: formData.name.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       date: formData.date,
       persons: parseInt(formData.persons.toString()),
       message: formData.message?.trim() || null,
-      status: 'pending' as const,
-      // user_id is omitted - will default to null in database
+      status: 'pending',
     }
 
-    const { data, error } = await supabase
-      .from('bookings')
-      .insert(insertData)
-      .select()
-      .single()
+    // Direct REST API call with ONLY the anon key
+    // Using PostgREST format: apikey header + Authorization Bearer with anon key
+    const response = await fetch(`${supabaseUrl}/rest/v1/bookings?select=*`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify(insertData),
+    })
 
-    if (error) {
-      // Enhanced error logging for debugging
-      console.error('Booking creation error:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
+    const responseData = await response.json()
+
+    if (!response.ok) {
+      console.error('Booking creation error (REST API):', {
+        status: response.status,
+        statusText: response.statusText,
+        error: responseData,
         insertData,
       })
-      
+
       // Check for RLS-specific errors
-      if (error.code === '42501' || error.message?.includes('row-level security') || error.message?.includes('RLS')) {
-        console.error('RLS Policy Error - This indicates the Supabase RLS policy may not be correctly configured.')
+      if (response.status === 403 || responseData?.code === '42501' || responseData?.message?.includes('row-level security')) {
+        console.error('RLS Policy Error - Verify the policy allows INSERT for anon role')
         return { 
-          error: 'Unable to submit booking. Please ensure all required fields are filled and try again.' 
+          error: 'Unable to submit booking. Please try again or contact support.' 
         }
       }
-      
-      return { error: error.message || 'Failed to create booking' }
+
+      return { 
+        error: responseData?.message || responseData?.error_description || 'Failed to create booking' 
+      }
     }
+
+    // Extract the inserted row (PostgREST returns array)
+    const data = Array.isArray(responseData) ? responseData[0] : responseData
 
     revalidatePath('/admin/bookings')
     return { data, error: null }
