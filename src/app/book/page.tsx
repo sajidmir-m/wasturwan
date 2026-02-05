@@ -19,15 +19,27 @@ export default function BookPage() {
 
   useEffect(() => {
     const loadPackages = async () => {
-      const { data } = await getJourneys()
-      if (data) {
-        setPackages(
-          data
+      try {
+        const { data, error } = await getJourneys()
+        if (error) {
+          console.error('Error loading packages:', error)
+          setError('Failed to load packages. Please refresh the page.')
+        } else if (data) {
+          const activePackages = data
             .filter((p: any) => p.status === "active")
             .map((p: any) => ({ id: p.id, title: p.title }))
-        )
+          setPackages(activePackages)
+          
+          if (activePackages.length === 0) {
+            console.warn('No active packages found')
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error loading packages:', err)
+        setError('Failed to load packages. Please refresh the page.')
+      } finally {
+        setFormLoading(false)
       }
-      setFormLoading(false)
     }
     loadPackages()
   }, [])

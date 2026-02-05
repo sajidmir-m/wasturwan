@@ -1,10 +1,15 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAnonymousClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
+/**
+ * Get all journeys/packages - public function that works for anonymous users
+ * Used for public-facing pages like booking form, packages page, etc.
+ */
 export async function getJourneys() {
-  const supabase = await createClient()
+  // Use anonymous client for public access
+  const supabase = createAnonymousClient()
   
   const { data, error } = await supabase
     .from('packages')
