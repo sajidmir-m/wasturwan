@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, User, Mail, Phone, MessageSquare, Send, Loader2, CheckCircle, AlertCircle } from "lucide-react"
-import { createBooking } from "@/lib/actions/bookings"
+import { Calendar, User, Mail, Phone, MessageSquare, Loader2, AlertCircle } from "lucide-react"
+import BookingSuccess from "./BookingSuccess"
 
 export default function BookingForm({ 
   packageId, 
@@ -25,9 +25,17 @@ export default function BookingForm({
     persons: 1,
     message: ""
   })
-  const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
+  const [bookingData, setBookingData] = useState<{
+    name: string
+    email: string
+    phone: string
+    date: string
+    persons: number
+    packageTitle?: string
+    message?: string
+  } | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -37,43 +45,29 @@ export default function BookingForm({
     }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError("")
-    setSuccess(false)
-
-    try {
-      const { data, error: actionError } = await createBooking({
-        packageId,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        date: formData.date,
-        persons: formData.persons,
-        message: formData.message
-      })
-
-      if (actionError) {
-        setError(actionError)
-        setLoading(false)
-      } else {
-        setSuccess(true)
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          date: "",
-          persons: 1,
-          message: ""
-        })
-        setLoading(false)
-        setTimeout(() => setSuccess(false), 5000)
-      }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred")
-      setLoading(false)
+    
+    // Validate required fields
+    if (!formData.name || !formData.email || !formData.phone || !formData.date || !formData.persons) {
+      setError("Please fill in all required fields")
+      return
     }
+
+    // Store booking data for email/WhatsApp options
+    setBookingData({
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      date: formData.date,
+      persons: formData.persons,
+      packageTitle: packageTitle,
+      message: formData.message || undefined
+    })
+    
+    setSuccess(true)
+    // Don't clear form - let user see their data before sending
   }
 
   return (
@@ -83,13 +77,8 @@ export default function BookingForm({
         <p className="text-blue-100 text-lg font-medium">From ₹{price.toLocaleString()} / person</p>
       </CardHeader>
       <CardContent className="p-8">
-        {success && (
-          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-            <p className="text-sm text-emerald-700">
-              Thank you! Your booking request has been received. We will contact you shortly.
-            </p>
-          </div>
+        {success && bookingData && (
+          <BookingSuccess bookingData={bookingData} />
         )}
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
@@ -186,20 +175,10 @@ export default function BookingForm({
 
           <Button 
             type="submit"
-            disabled={loading || success}
+            disabled={success}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-lg py-7 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <Send className="w-5 h-5 mr-2" />
-                Send Enquiry
-              </>
-            )}
+            Continue to Send
           </Button>
           
           <p className="text-xs text-center text-slate-500 mt-3 leading-relaxed">

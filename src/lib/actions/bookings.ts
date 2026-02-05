@@ -56,10 +56,10 @@ export async function createBooking(formData: {
       }
     }
 
-    // Prepare insert data
-    const insertData = {
-      package_id: resolvedPackageId,
-      user_id: null, // Explicitly set to null for anonymous bookings
+    // Prepare insert data - ensure all required fields are present
+    const insertData: any = {
+      package_id: resolvedPackageId || null,
+      user_id: null, // Always null for anonymous bookings
       name: formData.name.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
@@ -69,75 +69,40 @@ export async function createBooking(formData: {
       status: 'pending',
     }
 
-    // Use anonymous client for booking creation
-    // The client is configured to always operate as anonymous
-    const anonymousSupabase = createAnonymousClient()
-
-    // Attempt insert with anonymous client
-    // With the database properly configured, this should work
-    const { data, error } = await anonymousSupabase
+    // Use the official Supabase client for insertion instead of manual REST call
+    // This ensures proper header handling and error parsing
+    const { data: insertedData, error: insertError } = await supabase
       .from('bookings')
       .insert(insertData)
       .select()
       .single()
 
-    if (error) {
-      // If RLS error persists, try direct REST API as fallback
-      if (error.code === '42501' || error.message?.includes('row-level security')) {
-        console.error('RLS error with Supabase client, trying direct REST API...')
-        
-        // Direct REST API call - ensure proper PostgREST format
-        const restUrl = `${supabaseUrl}/rest/v1/bookings`
-        const restResponse = await fetch(restUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseAnonKey,
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-            'Prefer': 'return=representation',
-            // Explicitly set role to anon
-            'X-Client-Info': 'supabase-js-anon',
-          },
-          body: JSON.stringify(insertData),
-        })
+    if (insertError) {
+      console.error('❌ Supabase booking creation failed:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        insertData
+      })
 
-        const restData = await restResponse.json()
-
-        if (!restResponse.ok) {
-          console.error('Both Supabase client and REST API failed:', {
-            clientError: error,
-            restError: restData,
-            restStatus: restResponse.status,
-            insertData,
-          })
-
-          // This is definitely an RLS policy issue at the database level
-          return { 
-            error: 'Booking submission failed. Please verify RLS policies allow anonymous inserts.' 
-          }
+      // Check for permission errors
+      if (insertError.code === '42501' || insertError.message.includes('permission denied') || insertError.message.includes('row-level security')) {
+        console.error('🛑 PERMISSION DENIED: Please run supabase/enable-public-bookings.sql in your Supabase SQL Editor.')
+        return { 
+          error: 'Booking submission failed. Admin: Please run the enable-public-bookings.sql script to allow public bookings.' 
         }
-
-        // REST API succeeded
-        const insertedData = Array.isArray(restData) ? restData[0] : restData
-        revalidatePath('/admin/bookings')
-        return { data: insertedData, error: null }
       }
 
-      // Other errors
-      console.error('Booking creation error:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-        insertData,
-      })
-      
-      return { error: error.message || 'Failed to create booking' }
+      return { 
+        error: insertError.message || 'Failed to create booking' 
+      }
     }
-
-    // Success with Supabase client
+    
+    console.log('✅ Booking created successfully:', insertedData)
+    
     revalidatePath('/admin/bookings')
-    return { data, error: null }
+    return { data: insertedData, error: null }
   } catch (err: any) {
     console.error('Unexpected error creating booking:', err)
     return { error: err.message || 'An unexpected error occurred' }

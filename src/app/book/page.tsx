@@ -4,50 +4,112 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Sparkles, Send, Loader2, CheckCircle, CalendarDays, MapPin, Users } from "lucide-react"
+import { Sparkles, CalendarDays, MapPin, Users, Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
-import { createBooking } from "@/lib/actions/bookings"
 import { getJourneys } from "@/lib/actions/journeys"
+import BookingSuccess from "@/components/packages/BookingSuccess"
 
 export default function BookPage() {
-  const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
   const [packages, setPackages] = useState<{ id: string; title: string }[]>([])
   const [formLoading, setFormLoading] = useState(true)
   const [selectedPackageId, setSelectedPackageId] = useState("")
+  const [bookingData, setBookingData] = useState<{
+    name: string
+    email: string
+    phone: string
+    date: string
+    persons: number
+    packageTitle?: string
+    message?: string
+  } | null>(null)
 
   useEffect(() => {
     const loadPackages = async () => {
       try {
+        console.log('🔄 Loading packages...')
         const { data, error } = await getJourneys()
+        
+        console.log('📦 Packages response:', { 
+          hasData: !!data, 
+          dataType: Array.isArray(data) ? 'array' : typeof data,
+          dataLength: data?.length,
+          error: error ? {
+            message: error.message,
+            code: (error as any).code,
+            details: (error as any).details
+          } : null
+        })
+        
         if (error) {
-          console.error('Error loading packages:', error)
-          setError('Failed to load packages. Please refresh the page.')
-        } else if (data) {
+          console.error('❌ Error loading packages:', {
+            message: error.message,
+            code: (error as any).code,
+            details: (error as any).details,
+            hint: (error as any).hint
+          })
+          setError(`Packages load नहीं हो रहे: ${error.message}`)
+          setPackages([])
+          setFormLoading(false)
+          return
+        }
+        
+        if (data && Array.isArray(data)) {
+          console.log('✅ Raw packages data:', data)
+          
           const activePackages = data
-            .filter((p: any) => p.status === "active")
+            .filter((p: any) => {
+              const isValid = p && p.status === "active" && p.id && p.title
+              if (!isValid && p) {
+                console.warn('⚠️ Invalid package:', { 
+                  id: p.id, 
+                  title: p.title, 
+                  status: p.status,
+                  hasId: !!p.id,
+                  hasTitle: !!p.title
+                })
+              }
+              return isValid
+            })
             .map((p: any) => ({ id: p.id, title: p.title }))
+          
+          console.log('✅ Active packages for dropdown:', activePackages)
           setPackages(activePackages)
           
           if (activePackages.length === 0) {
-            console.warn('No active packages found')
+            if (data.length > 0) {
+              console.warn('⚠️ No active packages found. Total packages:', data.length)
+              console.warn('📋 All package statuses:', data.map((p: any) => ({ 
+                id: p.id, 
+                title: p.title, 
+                status: p.status 
+              })))
+            } else {
+              console.warn('⚠️ No packages found in database at all')
+            }
+          } else {
+            console.log(`✅ Successfully loaded ${activePackages.length} packages for dropdown`)
           }
+        } else {
+          console.warn('⚠️ No packages data received or data is not an array. Data:', data)
+          setPackages([])
         }
-      } catch (err) {
-        console.error('Unexpected error loading packages:', err)
-        setError('Failed to load packages. Please refresh the page.')
+      } catch (err: any) {
+        console.error('❌ Unexpected error loading packages:', err)
+        setError(`Unexpected error: ${err.message}`)
+        setPackages([])
       } finally {
         setFormLoading(false)
+        console.log('✅ Package loading complete')
       }
     }
     loadPackages()
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
-    setLoading(true)
     setError("")
     setSuccess(false)
 
@@ -63,31 +125,25 @@ export default function BookPage() {
     const email = formData.get("email") as string
     const phone = formData.get("phone") as string
 
-    const messageLines: string[] = []
-    if (selectedPackageLabel) messageLines.push(`Preferred package: ${selectedPackageLabel}`)
-    if (travelDate) messageLines.push(`Travel date: ${travelDate}`)
-    messageLines.push(baseMessage)
+    // Validate required fields
+    if (!name || !email || !phone || !travelDate || !persons) {
+      setError("Please fill in all required fields")
+      return
+    }
 
-    const { error: actionError } = await createBooking({
-      packageId: currentPackageId || null,
-      packageLabel: selectedPackageLabel || null,
+    // Store booking data for email/WhatsApp options (NO Supabase storage)
+    setBookingData({
       name,
       email,
       phone,
       date: travelDate || new Date().toISOString().slice(0, 10),
       persons: isNaN(persons) || persons <= 0 ? 1 : persons,
-      message: messageLines.join("\n\n").trim(),
+      packageTitle: selectedPackageLabel || undefined,
+      message: baseMessage || undefined
     })
-
-    if (actionError) {
-      setError(actionError)
-      setLoading(false)
-    } else {
-      setSuccess(true)
-      setLoading(false)
-      form.reset()
-      setTimeout(() => setSuccess(false), 5000)
-    }
+    
+    setSuccess(true)
+    // Don't reset form - let user see their data before sending
   }
 
   return (
@@ -121,11 +177,8 @@ export default function BookPage() {
           className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200/50"
         >
           <h3 className="text-2xl font-bold mb-8 text-slate-900 text-left">Tell us about your trip</h3>
-          {success && (
-            <div className="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-2">
-              <CheckCircle className="w-5 h-5" />
-              <span className="text-sm">Booking request sent! We'll get back to you soon.</span>
-            </div>
+          {success && bookingData && (
+            <BookingSuccess bookingData={bookingData} />
           )}
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
@@ -200,12 +253,13 @@ export default function BookPage() {
                 </label>
                 {formLoading ? (
                   <div className="h-12 rounded-xl border border-slate-200 px-3 flex items-center text-sm text-slate-400">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Loading packages...
                   </div>
-                ) : (
+                ) : packages.length > 0 ? (
                   <select
                     name="packageId"
-                    className="w-full h-12 rounded-xl border border-slate-200 px-3 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full h-12 rounded-xl border border-slate-200 px-3 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
                     value={selectedPackageId}
                     onChange={(e) => setSelectedPackageId(e.target.value)}
                   >
@@ -215,6 +269,16 @@ export default function BookPage() {
                         {pkg.title}
                       </option>
                     ))}
+                    <option value="">Custom itinerary / Not listed</option>
+                  </select>
+                ) : (
+                  <select
+                    name="packageId"
+                    className="w-full h-12 rounded-xl border border-slate-200 px-3 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
+                    value={selectedPackageId}
+                    onChange={(e) => setSelectedPackageId(e.target.value)}
+                  >
+                    <option value="">No packages available - Custom booking</option>
                     <option value="">Custom itinerary / Not listed</option>
                   </select>
                 )}
@@ -232,20 +296,10 @@ export default function BookPage() {
 
             <Button
               type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-lg h-14 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+              disabled={success}
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-lg h-14 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-5 h-5 mr-2" />
-                  Submit Booking Request
-                </>
-              )}
+              Continue to Send
             </Button>
           </form>
         </motion.div>

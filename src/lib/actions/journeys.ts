@@ -8,36 +8,63 @@ import { revalidatePath } from "next/cache"
  * Used for public-facing pages like booking form, packages page, etc.
  */
 export async function getJourneys() {
-  // Use anonymous client for public access
-  const supabase = createAnonymousClient()
-  
-  const { data, error } = await supabase
-    .from('packages')
-    .select('*')
-    .order('created_at', { ascending: false })
+  try {
+    // Use anonymous client for public access
+    const supabase = createAnonymousClient()
+    
+    // Fetch only active packages - filter at database level for better performance
+    const { data, error } = await supabase
+      .from('packages')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
 
-  if (error) {
-    console.error('Error fetching journeys:', error)
-    return { data: null, error }
+    if (error) {
+      console.error('Error fetching journeys:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
+      return { data: null, error }
+    }
+
+    // If no data, return empty array instead of null
+    if (!data || data.length === 0) {
+      console.warn('No active packages found in database')
+      return { data: [], error: null }
+    }
+
+    // Get images for each package (optional - don't fail if images fail)
+    const packagesWithImages = await Promise.all(
+      data.map(async (pkg) => {
+        try {
+          const { data: images } = await supabase
+            .from('package_images')
+            .select('image_url')
+            .eq('package_id', pkg.id)
+            .limit(1)
+
+          return {
+            ...pkg,
+            image: images?.[0]?.image_url || pkg.main_image_url || null
+          }
+        } catch (imgError) {
+          // If image fetch fails, just return package without image
+          console.warn(`Failed to fetch images for package ${pkg.id}:`, imgError)
+          return {
+            ...pkg,
+            image: pkg.main_image_url || null
+          }
+        }
+      })
+    )
+
+    return { data: packagesWithImages, error: null }
+  } catch (err: any) {
+    console.error('Unexpected error in getJourneys:', err)
+    return { data: null, error: { message: err.message || 'Failed to fetch packages' } }
   }
-
-  // Get images for each package
-  const packagesWithImages = await Promise.all(
-    (data || []).map(async (pkg) => {
-      const { data: images } = await supabase
-        .from('package_images')
-        .select('image_url')
-        .eq('package_id', pkg.id)
-        .limit(1)
-
-      return {
-        ...pkg,
-        image: images?.[0]?.image_url || pkg.main_image_url || null
-      }
-    })
-  )
-
-  return { data: packagesWithImages, error: null }
 }
 
 export async function getJourneyById(id: string) {
