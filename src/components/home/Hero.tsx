@@ -52,9 +52,9 @@ export default function Hero() {
 
             <div className="space-y-6">
               <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-white leading-[1.1] drop-shadow-2xl">
-                Kashmir, <br />
+                Wasturwan, <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-white italic font-normal">
-                  Unveiled.
+                 Tour and Travels.
                 </span>
               </h1>
               <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed font-light drop-shadow-lg">
