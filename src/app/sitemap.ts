@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next'
-import { getJourneys } from '@/lib/actions/journeys'
+import { createServerClient } from '@supabase/ssr'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Get base URL from environment variable or use default
@@ -42,25 +42,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ]
 
-  // Dynamic routes - Fetch packages from database
+  // Dynamic routes - Fetch packages from database without using cookies
   let dynamicRoutes: MetadataRoute.Sitemap = []
-  
-  try {
-    const { data: packages } = await getJourneys()
-    
-    if (packages && packages.length > 0) {
-      dynamicRoutes = packages
-        .filter((pkg: any) => pkg.status === 'active') // Only include active packages
-        .map((pkg: any) => ({
-          url: `${baseUrl}/packages/${pkg.id}`,
-          lastModified: pkg.updated_at ? new Date(pkg.updated_at) : new Date(pkg.created_at),
-          changeFrequency: 'weekly' as const,
-          priority: 0.8,
-        }))
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          getAll() {
+            return []
+          },
+          setAll() {
+            // no-op for sitemap; we don't need to persist cookies here
+          },
+        },
+      })
+
+      const { data: packages, error } = await supabase
+        .from('packages')
+        .select('id, status, created_at, updated_at')
+
+      if (!error && packages && packages.length > 0) {
+        dynamicRoutes = packages
+          .filter((pkg: any) => pkg.status === 'active')
+          .map((pkg: any) => ({
+            url: `${baseUrl}/packages/${pkg.id}`,
+            lastModified: pkg.updated_at ? new Date(pkg.updated_at) : new Date(pkg.created_at),
+            changeFrequency: 'weekly' as const,
+            priority: 0.8,
+          }))
+      }
+    } catch (error) {
+      console.error('Error fetching packages for sitemap:', error)
+      // Continue without dynamic routes if there's an error
     }
-  } catch (error) {
-    console.error('Error fetching packages for sitemap:', error)
-    // Continue without dynamic routes if there's an error
   }
 
   return [...staticRoutes, ...dynamicRoutes]
