@@ -1,6 +1,6 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAnonymousClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function getContacts() {
@@ -114,7 +114,9 @@ export async function createContact(formData: {
   subject?: string
   message: string
 }) {
-  const supabase = await createClient()
+  // Use anonymous client for public contact creation
+  // This ensures RLS policies work consistently across all devices/browsers
+  const supabase = createAnonymousClient()
 
   // Validate required fields
   if (!formData.name || !formData.name.trim()) {

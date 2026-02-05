@@ -1,6 +1,6 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAnonymousClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function createBooking(formData: {
@@ -13,7 +13,10 @@ export async function createBooking(formData: {
   persons: number
   message?: string
 }) {
-  const supabase = await createClient()
+  // Use anonymous client for public booking creation
+  // This ensures RLS policies work consistently across all devices/browsers
+  // regardless of cached auth sessions
+  const supabase = createAnonymousClient()
 
   try {
     // Validate required fields
@@ -25,6 +28,7 @@ export async function createBooking(formData: {
     let resolvedPackageId: string | null = formData.packageId ?? null
 
     // If no explicit id but we have a label from the website form, try to find the package by title.
+    // Use anonymous client for package lookup as well to ensure consistency
     if (!resolvedPackageId && formData.packageLabel) {
       const { data: pkg, error: pkgError } = await supabase
         .from('packages')
