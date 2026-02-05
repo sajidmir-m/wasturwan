@@ -425,6 +425,120 @@ CREATE INDEX IF NOT EXISTS idx_places_status ON public.places(status);
 CREATE INDEX IF NOT EXISTS idx_places_region ON public.places(region);
 
 -- ============================================
+-- STEP 11: CABS TABLE
+-- ============================================
+
+-- Cabs table for managing cab categories and fleets
+CREATE TABLE IF NOT EXISTS public.cabs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  category TEXT,
+  models TEXT[] DEFAULT '{}',
+  capacity_min INTEGER,
+  capacity_max INTEGER,
+  description TEXT,
+  tags TEXT[] DEFAULT '{}',
+  status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active' NOT NULL,
+  ordering INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE public.cabs ENABLE ROW LEVEL SECURITY;
+
+-- Trigger to auto-update updated_at for cabs
+CREATE TRIGGER IF NOT EXISTS update_cabs_updated_at
+  BEFORE UPDATE ON public.cabs
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Cabs policies
+CREATE POLICY IF NOT EXISTS "Public can view cabs"
+  ON public.cabs FOR SELECT
+  USING (status = 'active' OR is_admin());
+
+CREATE POLICY IF NOT EXISTS "Admins can manage cabs"
+  ON public.cabs FOR ALL
+  USING (is_admin());
+
+-- Indexes for cabs
+CREATE INDEX IF NOT EXISTS idx_cabs_status ON public.cabs(status);
+CREATE INDEX IF NOT EXISTS idx_cabs_slug ON public.cabs(slug);
+CREATE INDEX IF NOT EXISTS idx_cabs_category ON public.cabs(category);
+
+-- Grant permissions for cabs
+GRANT SELECT ON TABLE public.cabs TO anon, authenticated;
+GRANT ALL ON TABLE public.cabs TO authenticated;
+
+-- ============================================
+-- STEP 12: SEED DATA FOR CABS
+-- ============================================
+
+-- Insert initial cab categories
+INSERT INTO public.cabs (name, slug, category, models, capacity_min, capacity_max, description, tags, status, ordering)
+VALUES
+  (
+    'Sedan Cabs',
+    'sedan',
+    'Sedan',
+    ARRAY['Swift Dzire', 'Toyota Etios', 'Honda Amaze'],
+    2,
+    3,
+    'Comfortable sedans for airport transfers, Srinagar sightseeing and point‑to‑point travel across Kashmir.',
+    ARRAY['AC', 'Point‑to‑point', 'Budget friendly'],
+    'active',
+    1
+  ),
+  (
+    'Innova',
+    'innova',
+    'MPV',
+    ARRAY['Toyota Innova'],
+    4,
+    6,
+    'Spacious Innova for families and small groups who want extra legroom and luggage space on long drives.',
+    ARRAY['6–7 Seater', 'AC', 'Long routes'],
+    'active',
+    2
+  ),
+  (
+    'Innova Crysta',
+    'innova-crysta',
+    'MPV',
+    ARRAY['Innova Crysta'],
+    4,
+    6,
+    'Top‑end Crysta fleet for premium airport pickups, Gulmarg, Pahalgam and Sonamarg circuits.',
+    ARRAY['Premium', 'Comfort', 'Family trips'],
+    'active',
+    3
+  ),
+  (
+    'Tempo Traveller',
+    'tempo-traveller',
+    'Tempo Traveller',
+    ARRAY['9 Seater', '12 Seater', '17 Seater'],
+    8,
+    17,
+    'Tempo Travellers for groups, corporate movements and large family trips across Jammu & Kashmir.',
+    ARRAY['Group travel', 'Sightseeing', 'Multi‑day tours'],
+    'active',
+    4
+  )
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  category = EXCLUDED.category,
+  models = EXCLUDED.models,
+  capacity_min = EXCLUDED.capacity_min,
+  capacity_max = EXCLUDED.capacity_max,
+  description = EXCLUDED.description,
+  tags = EXCLUDED.tags,
+  status = EXCLUDED.status,
+  ordering = EXCLUDED.ordering,
+  updated_at = TIMEZONE('utc'::text, NOW());
+
+-- ============================================
 -- INITIALIZATION COMPLETE
 -- ============================================
 -- Your database is now ready!
@@ -432,6 +546,7 @@ CREATE INDEX IF NOT EXISTS idx_places_region ON public.places(region);
 -- Next steps:
 -- 1. Create your admin user via registration page: /admin/register
 -- 2. Or manually insert admin user in Supabase Dashboard
+-- 3. Upload cab images to Supabase Storage (if needed)
 -- ============================================
 
 
