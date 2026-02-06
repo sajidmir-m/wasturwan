@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { LayoutDashboard, Package, Calendar, MessageSquare, Settings, LogOut, Briefcase, Mail, Sparkles, Database, Car, Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -18,12 +19,34 @@ const navItems = [
 
 export default function AdminSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   // Close sidebar when route changes on mobile
   useEffect(() => {
     setIsOpen(false)
   }, [pathname])
+
+  const handleLogout = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoggingOut(true)
+    
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      
+      // Redirect to home page
+      router.push("/")
+      router.refresh()
+    } catch (error) {
+      console.error("Logout error:", error)
+      // Still redirect even if there's an error
+      router.push("/")
+    } finally {
+      setLoggingOut(false)
+    }
+  }
 
   return (
     <>
@@ -110,12 +133,14 @@ export default function AdminSidebar() {
               <p className="text-xs text-slate-400 truncate">admin@wasturwantravels.com</p>
             </div>
           </div>
-          <form action="/admin/logout" method="post">
-            <button type="submit" className="flex items-center w-full px-4 py-3 text-slate-300 hover:text-white hover:bg-red-600/20 rounded-xl transition-all duration-200 group">
-              <LogOut className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
-              <span className="font-medium">Logout</span>
+          <button 
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="flex items-center w-full px-4 py-3 text-slate-300 hover:text-white hover:bg-red-600/20 rounded-xl transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <LogOut className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
+            <span className="font-medium">{loggingOut ? "Logging out..." : "Logout"}</span>
           </button>
-          </form>
         </div>
       </div>
     </>

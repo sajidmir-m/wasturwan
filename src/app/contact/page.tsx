@@ -65,7 +65,7 @@ export default function ContactPage() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
           {/* Contact Info */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -97,7 +97,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-lg mb-1">Phone & WhatsApp</h4>
-                    <p className="text-slate-600">+91 7006594976</p>
+                    <p className="text-slate-600">+91 70065 94976</p>
+                    <p className="text-slate-600">+91 70061 92778</p>
                   </div>
                 </div>
 
@@ -220,6 +221,35 @@ export default function ContactPage() {
             </form>
           </motion.div>
         </div>
+
+        {/* Map Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-12"
+        >
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200/50">
+            <h3 className="text-2xl font-bold mb-6 text-slate-900">Find Us</h3>
+            <div className="w-full h-[400px] rounded-2xl overflow-hidden border border-slate-200">
+              <iframe
+                src="https://www.google.com/maps?q=Pahal+Brein+Nishat+Road+Srinagar+Jammu+and+Kashmir+191121&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="w-full h-full"
+                title="Wasturwan Travels Location - Ground Floor, Pahal Brein, Nishat Road, Srinagar"
+              />
+            </div>
+            <p className="mt-4 text-slate-600 text-center">
+              <strong>Wasturwan Travels</strong><br />
+              Ground Floor, Pahal Brein, Nishat Road, Srinagar, J&amp;K - 191121
+            </p>
+          </div>
+        </motion.div>
       </div>
     </div>
   )
