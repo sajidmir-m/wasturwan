@@ -1,110 +1,85 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { MapPin, Sparkles } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
-const places = [
-  { 
-    name: "Srinagar", 
-    region: "Kashmir Valley", 
-    image: "/dallake.png",
-    description: "Shikara rides on Dal Lake, Mughal gardens, and the heritage of old Srinagar city."
+type Place = {
+  name: string
+  region: string
+  image: string
+  description: string
+}
+
+const STATIC_PLACES: Place[] = [
+  {
+    name: "Srinagar",
+    region: "Kashmir Valley",
+    image: "/dal.png",
+    description:
+      "Shikara rides on Dal Lake, Mughal gardens, and the heritage of old Srinagar city.",
   },
-  { 
-    name: "Gulmarg", 
-    region: "Kashmir Valley", 
+  {
+    name: "Gulmarg",
+    region: "Kashmir Valley",
     image: "/1767803609020.jpeg",
-    description: "Snow-clad meadows, Gulmarg Gondola, skiing in winter and lush green walks in summer."
+    description:
+      "Snow-clad meadows, Gulmarg Gondola, skiing in winter and lush green walks in summer.",
   },
-  { 
-    name: "Pahalgam", 
-    region: "Kashmir Valley", 
+  {
+    name: "Pahalgam",
+    region: "Kashmir Valley",
     image: "/1767803600176.jpeg",
-    description: "Riverside valleys, Betaab Valley, Aru, and scenic pony trails loved by families."
+    description:
+      "Riverside valleys, Betaab Valley, Aru, and scenic pony trails loved by families.",
   },
-  { 
-    name: "Sonamarg", 
-    region: "Kashmir Valley", 
+  {
+    name: "Sonamarg",
+    region: "Kashmir Valley",
     image: "/1767803650229.jpeg",
-    description: "Golden meadows, glacier views, and the gateway towards Ladakh."
-  },
-  { 
-    name: "Doodhpathri", 
-    region: "Kashmir Valley", 
-    image: "/1767803735796.jpeg",
-    description: "Offbeat green meadows and crystal-clear streams, perfect for peaceful day trips."
-  },
-  { 
-    name: "Yusmarg", 
-    region: "Kashmir Valley", 
-    image: "/1767803751161.jpeg",
-    description: "Pine forests, rolling meadows, and quiet treks away from the crowds."
-  },
-  { 
-    name: "Gurez Valley", 
-    region: "Kashmir Valley", 
-    image: "/1767803728726.jpeg",
-    description: "Remote border valley, wooden villages, and stunning views of Habba Khatoon peak."
-  },
-  { 
-    name: "Kupwara & Bangus", 
-    region: "Kashmir Valley", 
-    image: "/1767803439961.jpeg",
-    description: "Untouched meadows and forests, ideal for nature lovers and photographers."
-  },
-  { 
-    name: "Pulwama & Aharbal", 
-    region: "Kashmir Valley", 
-    image: "/1767803580261.jpeg",
-    description: "The famous Aharbal waterfall and scenic countryside drives."
-  },
-  { 
-    name: "Anantnag & Verinag", 
-    region: "Kashmir Valley", 
-    image: "/1767803583853.jpeg",
-    description: "Ancient springs, gardens and the starting point of the Jhelum river."
-  },
-  { 
-    name: "Ladakh", 
-    region: "Union Territory of Ladakh", 
-    image: "/Lehladakh.jpeg",
-    description: "High-altitude deserts, monasteries, and dramatic landscapes across the region."
-  },
-  { 
-    name: "Leh", 
-    region: "Union Territory of Ladakh", 
-    image: "/Leh.jpeg",
-    description: "Leh town, Shanti Stupa, local markets and nearby monasteries like Thiksey and Hemis."
-  },
-  { 
-    name: "Kargil", 
-    region: "Union Territory of Ladakh", 
-    image: "/Ladakh.jpeg",
-    description: "Historic mountain routes, war memorials, and a blend of cultures on the highway."
-  },
-  { 
-    name: "Jammu", 
-    region: "Jammu Region", 
-    image: "/1767803335038.jpeg",
-    description: "The winter capital, temples, and a base for exploring the wider Jammu region."
-  },
-  { 
-    name: "Patnitop", 
-    region: "Jammu Region", 
-    image: "/1767803345571.jpeg",
-    description: "Hill station with pine forests, viewpoints and snow in winter months."
-  },
-  { 
-    name: "Katra & Vaishno Devi", 
-    region: "Jammu Region", 
-    image: "/1767803358391.jpeg",
-    description: "Spiritual journey to Mata Vaishno Devi shrine with comfortable stay options."
+    description:
+      "Golden meadows, glacier views, and the gateway towards Ladakh.",
   },
 ]
 
 export default function PlacesPage() {
+  const [places, setPlaces] = useState<Place[]>(STATIC_PLACES)
+
+  useEffect(() => {
+    const loadPlaces = async () => {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from("places")
+          .select("name, region, hero_image_url, short_description, status")
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+
+        if (error) throw error
+
+        if (data && data.length > 0) {
+          const mapped: Place[] = data.map((p) => ({
+            name: p.name,
+            region: p.region || "Kashmir Valley",
+            image: p.hero_image_url || STATIC_PLACES[0].image,
+            description:
+              p.short_description ||
+              "Explore this beautiful destination in Jammu & Kashmir.",
+          }))
+          setPlaces(mapped)
+        }
+      } catch (err) {
+        console.error("Error loading places from Supabase", err)
+        // fall back to STATIC_PLACES
+      }
+    }
+
+    loadPlaces()
+  }, [])
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50/50 py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

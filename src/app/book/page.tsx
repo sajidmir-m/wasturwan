@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Sparkles, CalendarDays, MapPin, Users, Loader2 } from "lucide-react"
+import { Sparkles, CalendarDays, MapPin, Users, Loader2, X } from "lucide-react"
 import { motion } from "framer-motion"
-import { getJourneys } from "@/lib/actions/journeys"
 import BookingSuccess from "@/components/packages/BookingSuccess"
+import { createClient as createBrowserSupabase } from "@/lib/supabase/client"
 
 export default function BookPage() {
   const [success, setSuccess] = useState(false)
@@ -25,89 +26,32 @@ export default function BookPage() {
     message?: string
   } | null>(null)
 
+  const router = useRouter()
+
   useEffect(() => {
     const loadPackages = async () => {
       try {
-        console.log('🔄 Loading packages...')
-        const { data, error } = await getJourneys()
-        
-        console.log('📦 Packages response:', { 
-          hasData: !!data, 
-          dataType: Array.isArray(data) ? 'array' : typeof data,
-          dataLength: data?.length,
-          error: error ? {
-            message: error.message,
-            code: (error as any).code,
-            details: (error as any).details
-          } : null
-        })
-        
-        if (error) {
-          console.error('❌ Error loading packages:', {
-            message: error.message,
-            code: (error as any).code,
-            details: (error as any).details,
-            hint: (error as any).hint
-          })
-          setError(`Packages load नहीं हो रहे: ${error.message}`)
-          setPackages([])
-          setFormLoading(false)
-          return
+        const supabase = createBrowserSupabase()
+        const { data, error } = await supabase
+          .from("packages")
+          .select("id, title")
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+
+        if (!error && data) {
+          setPackages(data)
         }
-        
-        if (data && Array.isArray(data)) {
-          console.log('✅ Raw packages data:', data)
-          
-          const activePackages = data
-            .filter((p: any) => {
-              const isValid = p && p.status === "active" && p.id && p.title
-              if (!isValid && p) {
-                console.warn('⚠️ Invalid package:', { 
-                  id: p.id, 
-                  title: p.title, 
-                  status: p.status,
-                  hasId: !!p.id,
-                  hasTitle: !!p.title
-                })
-              }
-              return isValid
-            })
-            .map((p: any) => ({ id: p.id, title: p.title }))
-          
-          console.log('✅ Active packages for dropdown:', activePackages)
-          setPackages(activePackages)
-          
-          if (activePackages.length === 0) {
-            if (data.length > 0) {
-              console.warn('⚠️ No active packages found. Total packages:', data.length)
-              console.warn('📋 All package statuses:', data.map((p: any) => ({ 
-                id: p.id, 
-                title: p.title, 
-                status: p.status 
-              })))
-            } else {
-              console.warn('⚠️ No packages found in database at all')
-            }
-          } else {
-            console.log(`✅ Successfully loaded ${activePackages.length} packages for dropdown`)
-          }
-        } else {
-          console.warn('⚠️ No packages data received or data is not an array. Data:', data)
-          setPackages([])
-        }
-      } catch (err: any) {
-        console.error('❌ Unexpected error loading packages:', err)
-        setError(`Unexpected error: ${err.message}`)
-        setPackages([])
+      } catch (err) {
+        console.error("Error loading packages for booking form", err)
       } finally {
         setFormLoading(false)
-        console.log('✅ Package loading complete')
       }
     }
+
     loadPackages()
   }, [])
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
     setError("")
@@ -131,7 +75,42 @@ export default function BookPage() {
       return
     }
 
-    // Store booking data for email/WhatsApp options (NO Supabase storage)
+    try {
+      // 1) Save booking in bookings table
+      await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          date: travelDate || new Date().toISOString().slice(0, 10),
+          persons: isNaN(persons) || persons <= 0 ? 1 : persons,
+          packageId: currentPackageId || null,
+          message: baseMessage || undefined,
+        }),
+      })
+
+      // 2) Also create a contact entry so admin can see the enquiry
+      await fetch("/api/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          subject: currentPackageId ? "Package booking enquiry" : "Custom booking enquiry",
+          message:
+            baseMessage ||
+            `Booking enquiry for ${selectedPackageLabel || "custom itinerary"} on ${travelDate} for ${persons} person(s).`,
+        }),
+      })
+    } catch (err) {
+      console.error("Error creating booking/contact", err)
+      setError("We could not save your booking right now. You can still send via WhatsApp or Email.")
+    }
+
+    // Store booking data for email/WhatsApp options
     setBookingData({
       name,
       email,
@@ -177,9 +156,6 @@ export default function BookPage() {
           className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200/50"
         >
           <h3 className="text-2xl font-bold mb-8 text-slate-900 text-left">Tell us about your trip</h3>
-          {success && bookingData && (
-            <BookingSuccess bookingData={bookingData} />
-          )}
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
               <span className="text-sm">{error}</span>
@@ -304,6 +280,35 @@ export default function BookPage() {
           </form>
         </motion.div>
       </div>
+      
+      {/* Modal Popup for Email/WhatsApp Options */}
+      {success && bookingData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start md:items-center justify-center p-4 pt-10">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-slate-900">Choose How to Send</h2>
+                <button
+                  onClick={() => {
+                    setSuccess(false)
+                    setBookingData(null)
+                    router.push("/")
+                  }}
+                  className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-600" />
+                </button>
+              </div>
+              <BookingSuccess bookingData={bookingData} />
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

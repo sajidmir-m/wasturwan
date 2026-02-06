@@ -1,552 +1,298 @@
 -- ============================================
--- FRESH DATABASE SCHEMA FOR KHALEEJ TOUR AND TRAVEL
--- ============================================
--- Run this in Supabase SQL Editor to create all tables
+-- CLEAN SUPABASE SCHEMA FOR WASTURWAN TRAVELS
 -- ============================================
 
--- ============================================
--- STEP 1: DROP EXISTING TABLES (if they exist)
--- ============================================
-DROP TABLE IF EXISTS public.reviews CASCADE;
-DROP TABLE IF EXISTS public.bookings CASCADE;
-DROP TABLE IF EXISTS public.contacts CASCADE;
-DROP TABLE IF EXISTS public.package_images CASCADE;
-DROP TABLE IF EXISTS public.packages CASCADE;
-DROP TABLE IF EXISTS public.services CASCADE;
-DROP TABLE IF EXISTS public.users CASCADE;
+-- Enable required extensions
+create extension if not exists "uuid-ossp";
+create extension if not exists "pgcrypto";
 
--- ============================================
--- STEP 2: DROP EXISTING FUNCTIONS
--- ============================================
-DROP FUNCTION IF EXISTS public.is_admin() CASCADE;
-DROP FUNCTION IF EXISTS public.update_updated_at_column() CASCADE;
-DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users CASCADE;
-
--- ============================================
--- STEP 3: CREATE TABLES
--- ============================================
-
--- Users table (extends auth.users)
-CREATE TABLE public.users (
-  id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
-  name TEXT,
-  email TEXT,
-  role TEXT CHECK (role IN ('admin', 'customer')) DEFAULT 'customer' NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+-- ========================
+-- USERS (for future admin)
+-- ========================
+create table if not exists public.users (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  name text,
+  role text not null default 'customer',
+  created_at timestamptz not null default timezone('utc'::text, now())
 );
 
--- Packages/Journeys table
-CREATE TABLE public.packages (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  price NUMERIC NOT NULL,
-  days INTEGER NOT NULL,
-  nights INTEGER NOT NULL,
-  duration TEXT NOT NULL,
-  description TEXT,
-  location TEXT,
-  category TEXT,
-  rating NUMERIC DEFAULT 0,
-  status TEXT CHECK (status IN ('active', 'draft')) DEFAULT 'active' NOT NULL,
-  featured BOOLEAN DEFAULT false NOT NULL,
-  main_image_url TEXT,
-  itinerary JSONB,
-  inclusions TEXT[],
-  exclusions TEXT[],
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+-- Simple helper to check admin role
+create or replace function public.is_admin()
+returns boolean
+language plpgsql
+as $$
+declare
+  user_role text;
+begin
+  select role into user_role
+  from public.users
+  where id = auth.uid()
+  limit 1;
+
+  return coalesce(user_role, 'customer') = 'admin';
+exception
+  when others then
+    return false;
+end;
+$$;
+
+-- ============
+-- PACKAGES
+-- ============
+create table if not exists public.packages (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  location text,
+  category text,
+  price numeric(12,2) not null check (price >= 0),
+  days integer not null check (days > 0),
+  nights integer not null check (nights >= 0),
+  duration text,
+  description text,
+  status text not null default 'active' check (status in ('active', 'inactive')),
+  featured boolean not null default false,
+  rating numeric(3,1),
+  main_image_url text,
+  itinerary jsonb default '[]'::jsonb,
+  inclusions jsonb default '[]'::jsonb,
+  exclusions jsonb default '[]'::jsonb,
+  created_at timestamptz not null default timezone('utc'::text, now())
 );
 
--- Package Images table
-CREATE TABLE public.package_images (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  package_id UUID REFERENCES public.packages ON DELETE CASCADE NOT NULL,
-  image_url TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+create table if not exists public.package_images (
+  id uuid primary key default gen_random_uuid(),
+  package_id uuid not null references public.packages(id) on delete cascade,
+  image_url text not null,
+  created_at timestamptz not null default timezone('utc'::text, now())
 );
 
--- Services table
-CREATE TABLE public.services (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  icon TEXT NOT NULL,
-  status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active' NOT NULL,
-  featured BOOLEAN DEFAULT false NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+-- ============
+-- SERVICES
+-- ============
+create table if not exists public.services (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  icon text,
+  status text not null default 'active' check (status in ('active', 'inactive')),
+  created_at timestamptz not null default timezone('utc'::text, now())
 );
 
--- Contacts/Enquiries table
-CREATE TABLE public.contacts (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  phone TEXT,
-  subject TEXT,
-  message TEXT NOT NULL,
-  status TEXT CHECK (status IN ('pending', 'replied', 'closed')) DEFAULT 'pending' NOT NULL,
-  replied_at TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+-- ============
+-- CONTACTS
+-- ============
+create table if not exists public.contacts (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text not null,
+  phone text,
+  subject text,
+  message text not null,
+  status text not null default 'pending' check (status in ('pending', 'replied', 'archived')),
+  replied_at timestamptz,
+  created_at timestamptz not null default timezone('utc'::text, now())
 );
 
--- Bookings table
-CREATE TABLE public.bookings (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-  package_id UUID REFERENCES public.packages(id) ON DELETE SET NULL,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  date DATE NOT NULL,
-  persons INTEGER NOT NULL,
-  status TEXT CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')) DEFAULT 'pending' NOT NULL,
-  message TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+-- ============
+-- BOOKINGS
+-- ============
+create table if not exists public.bookings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.users(id) on delete set null,
+  package_id uuid references public.packages(id) on delete set null,
+  name text not null,
+  email text not null,
+  phone text not null,
+  date date not null,
+  persons integer not null check (persons > 0),
+  status text not null default 'pending' check (status in ('pending', 'confirmed', 'completed', 'cancelled')),
+  message text,
+  created_at timestamptz not null default timezone('utc'::text, now())
 );
 
--- Reviews table
-CREATE TABLE public.reviews (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-  package_id UUID REFERENCES public.packages(id) ON DELETE SET NULL,
-  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-  comment TEXT,
-  approved BOOLEAN DEFAULT false NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+-- =========================
+-- ENABLE ROW LEVEL SECURITY
+-- =========================
+alter table public.users enable row level security;
+alter table public.packages enable row level security;
+alter table public.package_images enable row level security;
+alter table public.services enable row level security;
+alter table public.contacts enable row level security;
+alter table public.bookings enable row level security;
+
+-- ============
+-- CABS
+-- ============
+create table if not exists public.cabs (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text unique,
+  type text not null, -- e.g. sedan, innova, crysta, tempo
+  capacity integer not null check (capacity > 0),
+  luggage_capacity integer,
+  description text,
+  base_fare numeric(12,2),
+  per_km_rate numeric(12,2),
+  featured boolean not null default false,
+  status text not null default 'active' check (status in ('active', 'inactive')),
+  main_image_url text,
+  tags text[] default '{}',
+  created_at timestamptz not null default timezone('utc'::text, now())
 );
 
--- ============================================
--- STEP 4: ENABLE ROW LEVEL SECURITY (RLS)
--- ============================================
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.package_images ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
-
--- ============================================
--- STEP 5: CREATE HELPER FUNCTIONS
--- ============================================
-
--- Function to check if current user is admin
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN AS $$
-DECLARE
-  user_role TEXT;
-BEGIN
-  SELECT role INTO user_role
-  FROM public.users
-  WHERE id = auth.uid()
-  LIMIT 1;
-  
-  RETURN COALESCE(user_role, 'customer') = 'admin';
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN false;
-END;
-$$ LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-STABLE;
-
--- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = TIMEZONE('utc'::text, NOW());
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Function to automatically create user record when auth user is created
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.users (id, email, role)
-  VALUES (NEW.id, NEW.email, 'customer')
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public;
-
--- ============================================
--- STEP 6: CREATE TRIGGERS
--- ============================================
-
--- Trigger to auto-update updated_at for packages
-CREATE TRIGGER update_packages_updated_at
-  BEFORE UPDATE ON public.packages
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
-
--- Trigger to auto-update updated_at for services
-CREATE TRIGGER update_services_updated_at
-  BEFORE UPDATE ON public.services
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
-
--- Trigger to auto-create user record when auth user signs up
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW
-  EXECUTE FUNCTION public.handle_new_user();
-
--- ============================================
--- STEP 7: CREATE RLS POLICIES
--- ============================================
-
--- Users table policies (NO is_admin() to avoid recursion)
-CREATE POLICY "Users can view own profile"
-  ON public.users FOR SELECT
-  USING (auth.uid() = id);
-
-CREATE POLICY "Users can insert own profile"
-  ON public.users FOR INSERT
-  WITH CHECK (auth.uid() = id);
-
-CREATE POLICY "Users can update own profile"
-  ON public.users FOR UPDATE
-  USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
-
--- Packages policies
-CREATE POLICY "Public can view packages"
-  ON public.packages FOR SELECT
-  USING (status = 'active' OR is_admin());
-
-CREATE POLICY "Admins can manage packages"
-  ON public.packages FOR ALL
-  USING (is_admin());
-
--- Package images policies
-CREATE POLICY "Public can view package images"
-  ON public.package_images FOR SELECT
-  USING (true);
-
-CREATE POLICY "Admins can manage package images"
-  ON public.package_images FOR ALL
-  USING (is_admin());
-
--- Services policies
-CREATE POLICY "Public can view services"
-  ON public.services FOR SELECT
-  USING (status = 'active' OR is_admin());
-
-CREATE POLICY "Admins can manage services"
-  ON public.services FOR ALL
-  USING (is_admin());
-
--- Contacts policies
--- Policy 1: Allow anyone (including anonymous users) to INSERT contacts
-CREATE POLICY "Public can create contacts"
-  ON public.contacts FOR INSERT
-  TO anon, authenticated
-  WITH CHECK (true);
-
--- Policy 2: Allow admins to view all contacts (for admin panel)
-CREATE POLICY "Admins can view all contacts"
-  ON public.contacts FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() 
-      AND role = 'admin'
-    )
-  );
-
--- Policy 3: Allow admins to UPDATE contacts
-CREATE POLICY "Admins can update contacts"
-  ON public.contacts FOR UPDATE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() 
-      AND role = 'admin'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() 
-      AND role = 'admin'
-    )
-  );
-
--- Policy 4: Allow admins to DELETE contacts
-CREATE POLICY "Admins can delete contacts"
-  ON public.contacts FOR DELETE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() 
-      AND role = 'admin'
-    )
-  );
-
--- Bookings policies
--- Policy 1: Allow anyone (including anonymous users) to INSERT bookings
-CREATE POLICY "Public can create bookings"
-  ON public.bookings FOR INSERT
-  TO anon, authenticated
-  WITH CHECK (true);
-
--- Policy 2: Allow authenticated users to view their own bookings
-CREATE POLICY "Users can view own bookings"
-  ON public.bookings FOR SELECT
-  TO authenticated
-  USING (auth.uid() = user_id);
-
--- Policy 3: Allow admins to view all bookings (for admin panel)
-CREATE POLICY "Admins can view all bookings"
-  ON public.bookings FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() 
-      AND role = 'admin'
-    )
-  );
-
--- Policy 4: Allow admins to UPDATE bookings
-CREATE POLICY "Admins can update bookings"
-  ON public.bookings FOR UPDATE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() 
-      AND role = 'admin'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() 
-      AND role = 'admin'
-    )
-  );
-
--- Policy 5: Allow admins to DELETE bookings
-CREATE POLICY "Admins can delete bookings"
-  ON public.bookings FOR DELETE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() 
-      AND role = 'admin'
-    )
-  );
-
--- Reviews policies
-CREATE POLICY "Public can view approved reviews"
-  ON public.reviews FOR SELECT
-  USING (approved = true OR is_admin());
-
-CREATE POLICY "Users can create reviews"
-  ON public.reviews FOR INSERT
-  WITH CHECK (auth.uid() = user_id OR is_admin());
-
-CREATE POLICY "Admins can manage reviews"
-  ON public.reviews FOR ALL
-  USING (is_admin());
-
--- ============================================
--- STEP 8: GRANT PERMISSIONS
--- ============================================
-GRANT USAGE ON SCHEMA public TO anon, authenticated;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.update_updated_at_column() TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
-
--- ============================================
--- STEP 9: CREATE INDEXES FOR PERFORMANCE
--- ============================================
-CREATE INDEX idx_users_email ON public.users(email);
-CREATE INDEX idx_users_role ON public.users(role);
-CREATE INDEX idx_packages_status ON public.packages(status);
-CREATE INDEX idx_packages_featured ON public.packages(featured);
-CREATE INDEX idx_package_images_package_id ON public.package_images(package_id);
-CREATE INDEX idx_bookings_user_id ON public.bookings(user_id);
-CREATE INDEX idx_bookings_package_id ON public.bookings(package_id);
-CREATE INDEX idx_bookings_status ON public.bookings(status);
-CREATE INDEX idx_reviews_package_id ON public.reviews(package_id);
-CREATE INDEX idx_reviews_approved ON public.reviews(approved);
-CREATE INDEX idx_contacts_status ON public.contacts(status);
-
--- ============================================
--- STEP 10: PLACES TABLE (OPTIONAL FEATURE)
--- ============================================
-
--- Places table for managing destinations (admin + public)
-CREATE TABLE IF NOT EXISTS public.places (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  slug TEXT UNIQUE,
-  region TEXT,
-  description TEXT,
-  image_url TEXT,
-  status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active' NOT NULL,
-  ordering INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+-- ============
+-- PLACES
+-- ============
+create table if not exists public.places (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text unique,
+  region text,
+  short_description text,
+  description text,
+  hero_image_url text,
+  gallery jsonb default '[]'::jsonb,
+  status text not null default 'active' check (status in ('active', 'inactive')),
+  featured boolean not null default false,
+  created_at timestamptz not null default timezone('utc'::text, now())
 );
 
-ALTER TABLE public.places ENABLE ROW LEVEL SECURITY;
+alter table public.cabs enable row level security;
+alter table public.places enable row level security;
 
--- Trigger to auto-update updated_at for places
-CREATE TRIGGER IF NOT EXISTS update_places_updated_at
-  BEFORE UPDATE ON public.places
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
+-- =========================
+-- POLICIES: PACKAGES
+-- =========================
+create policy "Public can view active packages"
+  on public.packages
+  for select
+  using (status = 'active');
 
--- Places policies
-CREATE POLICY IF NOT EXISTS "Public can view places"
-  ON public.places FOR SELECT
-  USING (status = 'active' OR is_admin());
+create policy "Admins can manage packages"
+  on public.packages
+  for all
+  to authenticated
+  using (is_admin());
 
-CREATE POLICY IF NOT EXISTS "Admins can manage places"
-  ON public.places FOR ALL
-  USING (is_admin());
+create policy "Public can view package images"
+  on public.package_images
+  for select
+  using (true);
 
-CREATE INDEX IF NOT EXISTS idx_places_status ON public.places(status);
-CREATE INDEX IF NOT EXISTS idx_places_region ON public.places(region);
+create policy "Admins can manage package images"
+  on public.package_images
+  for all
+  to authenticated
+  using (is_admin());
 
--- ============================================
--- STEP 11: CABS TABLE
--- ============================================
+-- =========================
+-- POLICIES: SERVICES
+-- =========================
+create policy "Public can view services"
+  on public.services
+  for select
+  using (status = 'active');
 
--- Cabs table for managing cab categories and fleets
-CREATE TABLE IF NOT EXISTS public.cabs (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  slug TEXT UNIQUE NOT NULL,
-  category TEXT,
-  models TEXT[] DEFAULT '{}',
-  capacity_min INTEGER,
-  capacity_max INTEGER,
-  description TEXT,
-  tags TEXT[] DEFAULT '{}',
-  status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active' NOT NULL,
-  ordering INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
-);
+create policy "Admins can manage services"
+  on public.services
+  for all
+  to authenticated
+  using (is_admin());
 
-ALTER TABLE public.cabs ENABLE ROW LEVEL SECURITY;
+-- =========================
+-- POLICIES: CONTACTS
+-- =========================
+-- Allow anonymous/public INSERT for contact form
+create policy "Public can create contacts"
+  on public.contacts
+  for insert
+  to anon, authenticated
+  with check (true);
 
--- Trigger to auto-update updated_at for cabs
-CREATE TRIGGER IF NOT EXISTS update_cabs_updated_at
-  BEFORE UPDATE ON public.cabs
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
+-- Admins can view/update/delete all contacts
+create policy "Admins can view contacts"
+  on public.contacts
+  for select
+  to authenticated
+  using (is_admin());
 
--- Cabs policies
-CREATE POLICY IF NOT EXISTS "Public can view cabs"
-  ON public.cabs FOR SELECT
-  USING (status = 'active' OR is_admin());
+create policy "Admins can update contacts"
+  on public.contacts
+  for update
+  to authenticated
+  using (is_admin())
+  with check (is_admin());
 
-CREATE POLICY IF NOT EXISTS "Admins can manage cabs"
-  ON public.cabs FOR ALL
-  USING (is_admin());
+create policy "Admins can delete contacts"
+  on public.contacts
+  for delete
+  to authenticated
+  using (is_admin());
 
--- Indexes for cabs
-CREATE INDEX IF NOT EXISTS idx_cabs_status ON public.cabs(status);
-CREATE INDEX IF NOT EXISTS idx_cabs_slug ON public.cabs(slug);
-CREATE INDEX IF NOT EXISTS idx_cabs_category ON public.cabs(category);
+-- =========================
+-- POLICIES: BOOKINGS
+-- =========================
+-- Allow anonymous/public INSERT for bookings
+create policy "Public can create bookings"
+  on public.bookings
+  for insert
+  to anon, authenticated
+  with check (true);
 
--- Grant permissions for cabs
-GRANT SELECT ON TABLE public.cabs TO anon, authenticated;
-GRANT ALL ON TABLE public.cabs TO authenticated;
+-- Authenticated users can view their own bookings when user_id is set
+create policy "Users can view own bookings"
+  on public.bookings
+  for select
+  to authenticated
+  using (auth.uid() = user_id);
 
--- ============================================
--- STEP 12: SEED DATA FOR CABS
--- ============================================
+-- Admins can view/update/delete all bookings
+create policy "Admins can view all bookings"
+  on public.bookings
+  for select
+  to authenticated
+  using (is_admin());
 
--- Insert initial cab categories
-INSERT INTO public.cabs (name, slug, category, models, capacity_min, capacity_max, description, tags, status, ordering)
-VALUES
-  (
-    'Sedan Cabs',
-    'sedan',
-    'Sedan',
-    ARRAY['Swift Dzire', 'Toyota Etios', 'Honda Amaze'],
-    2,
-    3,
-    'Comfortable sedans for airport transfers, Srinagar sightseeing and point‑to‑point travel across Kashmir.',
-    ARRAY['AC', 'Point‑to‑point', 'Budget friendly'],
-    'active',
-    1
-  ),
-  (
-    'Innova',
-    'innova',
-    'MPV',
-    ARRAY['Toyota Innova'],
-    4,
-    6,
-    'Spacious Innova for families and small groups who want extra legroom and luggage space on long drives.',
-    ARRAY['6–7 Seater', 'AC', 'Long routes'],
-    'active',
-    2
-  ),
-  (
-    'Innova Crysta',
-    'innova-crysta',
-    'MPV',
-    ARRAY['Innova Crysta'],
-    4,
-    6,
-    'Top‑end Crysta fleet for premium airport pickups, Gulmarg, Pahalgam and Sonamarg circuits.',
-    ARRAY['Premium', 'Comfort', 'Family trips'],
-    'active',
-    3
-  ),
-  (
-    'Tempo Traveller',
-    'tempo-traveller',
-    'Tempo Traveller',
-    ARRAY['9 Seater', '12 Seater', '17 Seater'],
-    8,
-    17,
-    'Tempo Travellers for groups, corporate movements and large family trips across Jammu & Kashmir.',
-    ARRAY['Group travel', 'Sightseeing', 'Multi‑day tours'],
-    'active',
-    4
-  )
-ON CONFLICT (slug) DO UPDATE SET
-  name = EXCLUDED.name,
-  category = EXCLUDED.category,
-  models = EXCLUDED.models,
-  capacity_min = EXCLUDED.capacity_min,
-  capacity_max = EXCLUDED.capacity_max,
-  description = EXCLUDED.description,
-  tags = EXCLUDED.tags,
-  status = EXCLUDED.status,
-  ordering = EXCLUDED.ordering,
-  updated_at = TIMEZONE('utc'::text, NOW());
+create policy "Admins can update bookings"
+  on public.bookings
+  for update
+  to authenticated
+  using (is_admin())
+  with check (is_admin());
 
--- ============================================
--- INITIALIZATION COMPLETE
--- ============================================
--- Your database is now ready!
--- 
--- Next steps:
--- 1. Create your admin user via registration page: /admin/register
--- 2. Or manually insert admin user in Supabase Dashboard
--- 3. Upload cab images to Supabase Storage (if needed)
--- ============================================
+create policy "Admins can delete bookings"
+  on public.bookings
+  for delete
+  to authenticated
+  using (is_admin());
+
+-- =========================
+-- POLICIES: CABS
+-- =========================
+create policy "Public can view active cabs"
+  on public.cabs
+  for select
+  using (status = 'active');
+
+create policy "Admins can manage cabs"
+  on public.cabs
+  for all
+  to authenticated
+  using (is_admin());
+
+-- =========================
+-- POLICIES: PLACES
+-- =========================
+create policy "Public can view active places"
+  on public.places
+  for select
+  using (status = 'active');
+
+create policy "Admins can manage places"
+  on public.places
+  for all
+  to authenticated
+  using (is_admin());
 
 

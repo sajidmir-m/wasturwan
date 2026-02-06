@@ -1,21 +1,38 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import Image from "next/image"
 import { Car, Users, Luggage, ArrowRight, CheckCircle2 } from "lucide-react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
 
-const cabGroups = [
+type CabCard = {
+  key: string
+  title: string
+  subtitle: string
+  description: string
+  cars: string[]
+  tags: string[]
+  icon: typeof Car
+  image: string
+  ratePerDay: number
+}
+
+const STATIC_CABS: CabCard[] = [
   {
     key: "sedan",
     title: "Sedan Cabs",
     subtitle: "Perfect for 2–3 guests",
     description:
-      "Comfortable sedans for airport transfers, Srinagar sightseeing and point‑to‑point travel across Kashmir.",
+      "Comfortable AC sedans ideal for airport transfers, city sightseeing and point‑to‑point travel across Kashmir.",
     cars: ["Swift Dzire", "Toyota Etios", "Honda Amaze"],
     tags: ["AC", "Point‑to‑point", "Budget friendly"],
     icon: Car,
+    image: "/1767803335038_1.jpeg",
+    ratePerDay: 2200,
   },
   {
     key: "innova",
@@ -26,6 +43,8 @@ const cabGroups = [
     cars: ["Toyota Innova"],
     tags: ["6–7 Seater", "AC", "Long routes"],
     icon: Users,
+    image: "/1767803358391.jpeg",
+    ratePerDay: 3200,
   },
   {
     key: "crysta",
@@ -36,6 +55,8 @@ const cabGroups = [
     cars: ["Innova Crysta"],
     tags: ["Premium", "Comfort", "Family trips"],
     icon: Luggage,
+    image: "/860cba809907170f51f17a6768b8c10cd838033623aa601fbc406caf5f3ad031.0.jpeg",
+    ratePerDay: 3800,
   },
   {
     key: "tempo",
@@ -46,10 +67,59 @@ const cabGroups = [
     cars: ["9/12/17 Seater Tempo Traveller"],
     tags: ["Group travel", "Sightseeing", "Multi‑day tours"],
     icon: Users,
+    image: "/1767803439961.jpeg",
+    ratePerDay: 5500,
   },
 ]
 
 export default function CabsPage() {
+  const [cabGroups, setCabGroups] = useState<CabCard[]>(STATIC_CABS)
+
+  useEffect(() => {
+    const loadCabs = async () => {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from("cabs")
+          .select(
+            "name, type, description, base_fare, per_km_rate, main_image_url, tags, status",
+          )
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+
+        if (error) throw error
+
+        if (data && data.length > 0) {
+          const mapped: CabCard[] = data.map((c) => ({
+            key: c.name.toLowerCase().replace(/\s+/g, "-"),
+            title: c.name,
+            subtitle: c.type === "sedan" ? "Perfect for 2–3 guests" : c.type === "tempo" ? "Groups & Incentives" : "Family comfort",
+            description:
+              c.description ||
+              "Neat, well‑maintained vehicles with experienced local drivers.",
+            cars:
+              c.type === "tempo"
+                ? ["9/12/17 Seater Tempo Traveller"]
+                : c.type === "sedan"
+                ? ["Swift Dzire", "Toyota Etios", "Honda Amaze"]
+                : ["Toyota Innova / Crysta"],
+            tags: (c.tags as string[]) || [],
+            icon: c.type === "crysta" ? Luggage : Users,
+            image: c.main_image_url || STATIC_CABS[0].image,
+            ratePerDay: Number(c.base_fare || 0) || 2500,
+          }))
+
+          setCabGroups(mapped)
+        }
+      } catch (err) {
+        console.error("Error loading cabs from Supabase", err)
+        // keep STATIC_CABS
+      }
+    }
+
+    loadCabs()
+  }, [])
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50/50 py-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -80,7 +150,26 @@ export default function CabsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.07 }}
             >
-              <Card className="h-full rounded-3xl border-slate-200/60 shadow-lg hover:shadow-2xl transition-all duration-300">
+              <Card className="h-full rounded-3xl border-slate-200/60 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden bg-white">
+                <div className="relative h-48 w-full">
+                  <Image
+                    src={group.image}
+                    alt={group.title}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/65 to-transparent" />
+                  <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-xs text-white/90">
+                    <span className="inline-flex items-center gap-2 font-medium">
+                      <group.icon className="w-4 h-4" />
+                      {group.subtitle}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-white/15 border border-white/20 backdrop-blur-sm">
+                      From ₹{group.ratePerDay.toLocaleString("en-IN")} / day
+                    </span>
+                  </div>
+                </div>
                 <CardHeader className="pb-3 flex flex-row items-start justify-between gap-4">
                   <div>
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-xs font-semibold text-blue-700 mb-2">

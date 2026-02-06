@@ -1,357 +1,421 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus, Pencil, Trash2, Loader2, Car } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { getCabs, createCab, updateCab, deleteCab } from "@/lib/actions/cabs"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Loader2, Plus, Trash2, Edit2, Save, UploadCloud } from "lucide-react"
 
-interface Cab {
+type Cab = {
   id: string
   name: string
-  slug: string
-  category: string | null
-  models: string[] | null
-  capacity_min: number | null
-  capacity_max: number | null
-  description: string | null
-  tags: string[] | null
+  type: string
+  capacity: number
+  luggage_capacity: number | null
+  base_fare: number | null
+  per_km_rate: number | null
   status: string
-  ordering: number | null
+  featured: boolean
+  main_image_url: string | null
 }
 
 export default function AdminCabsPage() {
-  const [cabs, setCabs] = useState<Cab[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [editing, setEditing] = useState<Cab | null>(null)
-
-  const [form, setForm] = useState({
-    name: "",
-    slug: "",
-    category: "",
-    models: "",
-    capacity_min: "",
-    capacity_max: "",
-    description: "",
-    tags: "",
-    status: "active",
-    ordering: "",
-  })
+  const [cabs, setCabs] = useState<Cab[]>([])
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formState, setFormState] = useState<Partial<Cab>>({})
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
+    const loadCabs = async () => {
+      try {
+        const res = await fetch("/api/admin/cabs")
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || "Failed to load cabs")
+        setCabs(json.cabs || [])
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
     loadCabs()
   }, [])
 
-  const loadCabs = async () => {
-    setLoading(true)
-    const data = await getCabs()
-    setCabs(data || [])
-    setLoading(false)
-  }
-
-  const resetForm = () => {
-    setEditing(null)
-    setForm({
+  const startCreate = () => {
+    setEditingId("new")
+    setFormState({
       name: "",
-      slug: "",
-      category: "",
-      models: "",
-      capacity_min: "",
-      capacity_max: "",
-      description: "",
-      tags: "",
+      type: "sedan",
+      capacity: 4,
+      luggage_capacity: 2,
+      base_fare: null,
+      per_km_rate: null,
       status: "active",
-      ordering: "",
+      featured: false,
+      main_image_url: "",
     })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
+  const startEdit = (c: Cab) => {
+    setEditingId(c.id)
+    setFormState(c)
+  }
 
-    const payload = {
-      name: form.name,
-      slug: form.slug,
-      category: form.category || null,
-      models: form.models ? form.models.split(",").map((m) => m.trim()).filter(Boolean) : [],
-      capacity_min: form.capacity_min ? Number(form.capacity_min) : null,
-      capacity_max: form.capacity_max ? Number(form.capacity_max) : null,
-      description: form.description || null,
-      tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-      status: form.status as "active" | "inactive",
-      ordering: form.ordering ? Number(form.ordering) : null,
-    }
+  const cancelEdit = () => {
+    setEditingId(null)
+    setFormState({})
+  }
+
+  const handleChange = (name: keyof Cab, value: string | boolean) => {
+    setFormState((prev) => ({
+      ...prev,
+      [name]:
+        name === "capacity" ||
+        name === "luggage_capacity" ||
+        name === "base_fare" ||
+        name === "per_km_rate"
+          ? Number(value)
+          : value,
+    }))
+  }
+
+  const saveCab = async () => {
+    if (!formState.name) return
 
     try {
-      if (editing) {
-        await updateCab(editing.id, payload)
-      } else {
-        await createCab(payload)
-      }
-      await loadCabs()
-      resetForm()
+      setSaving(true)
+      const method = editingId === "new" ? "POST" : "PUT"
+      const res = await fetch("/api/admin/cabs", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formState),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to save cab")
+      setCabs(json.cabs || [])
+      cancelEdit()
+    } catch (err) {
+      console.error(err)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleEdit = (cab: Cab) => {
-    setEditing(cab)
-    setForm({
-      name: cab.name || "",
-      slug: cab.slug || "",
-      category: cab.category || "",
-      models: (cab.models || []).join(", "),
-      capacity_min: cab.capacity_min?.toString() || "",
-      capacity_max: cab.capacity_max?.toString() || "",
-      description: cab.description || "",
-      tags: (cab.tags || []).join(", "),
-      status: cab.status || "active",
-      ordering: cab.ordering?.toString() || "",
-    })
+  const handleImageUpload = async (file: File) => {
+    try {
+      setUploadingImage(true)
+
+      const fd = new FormData()
+      fd.append("bucket", "cabs")
+      fd.append("folder", "admin-cabs")
+      fd.append("file", file)
+
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd })
+      const json = await res.json()
+      if (!res.ok) {
+        console.error("Upload failed:", json?.error)
+        return
+      }
+
+      setFormState((prev) => ({ ...prev, main_image_url: json.publicUrl }))
+    } catch (err) {
+      console.error("Unexpected upload error", err)
+    } finally {
+      setUploadingImage(false)
+    }
   }
 
-  const handleDelete = async (cab: Cab) => {
-    if (!confirm(`Delete cab "${cab.name}"?`)) return
-    setSaving(true)
+  const deleteCab = async (id: string) => {
+    if (!confirm("Delete this cab?")) return
+
     try {
-      await deleteCab(cab.id)
-      await loadCabs()
+      setSaving(true)
+      const res = await fetch(`/api/admin/cabs?id=${id}`, { method: "DELETE" })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to delete cab")
+      setCabs(json.cabs || [])
+    } catch (err) {
+      console.error(err)
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between gap-3">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-slate-900 flex items-center gap-2">
-            <Car className="w-7 h-7 text-blue-600" />
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-1">
+            Admin
+          </p>
+          <h1 className="text-2xl md:text-3xl font-serif font-bold text-white">
             Cabs
           </h1>
-          <p className="text-slate-600 mt-1">Manage all cab categories and models shown on the public Cabs page.</p>
         </div>
+        <Button size="sm" onClick={startCreate} disabled={saving}>
+          <Plus className="w-4 h-4 mr-2" />
+          New Cab
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form */}
-        <Card className="lg:col-span-1 border-slate-200/60 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-slate-900">
-              {editing ? "Edit Cab" : "Add New Cab"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Name</label>
-                <Input
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Sedan Cabs"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Slug</label>
-                <Input
-                  required
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  placeholder="sedan"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Category</label>
-                <Input
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  placeholder="Sedan, MPV, Tempo Traveller..."
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Models (comma separated)</label>
-                <Input
-                  value={form.models}
-                  onChange={(e) => setForm({ ...form, models: e.target.value })}
-                  placeholder="Swift Dzire, Toyota Etios, Honda Amaze"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Min Persons</label>
-                  <Input
-                    type="number"
-                    value={form.capacity_min}
-                    onChange={(e) => setForm({ ...form, capacity_min: e.target.value })}
-                  />
+      {loading ? (
+        <div className="flex items-center gap-2 text-slate-400 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading cabs...
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {cabs.map((c) => (
+            <Card key={c.id} className="bg-slate-900/60 border-slate-800 text-slate-50">
+              <CardHeader className="flex flex-row items-center justify-between gap-4 pb-3">
+                <div>
+                  <CardTitle className="text-lg font-semibold">
+                    {c.name}
+                  </CardTitle>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {c.type} • {c.capacity} seats • {c.status}
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Max Persons</label>
-                  <Input
-                    type="number"
-                    value={form.capacity_max}
-                    onChange={(e) => setForm({ ...form, capacity_max: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Description</label>
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Short description for this cab category..."
-                  rows={4}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Tags (comma separated)</label>
-                <Input
-                  value={form.tags}
-                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                  placeholder="AC, Budget friendly, Sightseeing"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Status</label>
-                  <select
-                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                    value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Ordering</label>
-                  <Input
-                    type="number"
-                    value={form.ordering}
-                    onChange={(e) => setForm({ ...form, ordering: e.target.value })}
-                    placeholder="1, 2, 3..."
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-3 pt-2">
-                <Button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-full px-5"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      {editing ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                      {editing ? "Update Cab" : "Create Cab"}
-                    </>
-                  )}
-                </Button>
-                {editing && (
+                <div className="flex items-center gap-2">
                   <Button
-                    type="button"
+                    size="icon"
                     variant="outline"
-                    onClick={resetForm}
-                    className="rounded-full"
+                    className="h-8 w-8 border-slate-600"
+                    onClick={() => startEdit(c)}
+                    disabled={saving}
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-8 w-8 border-red-600 text-red-400"
+                    onClick={() => deleteCab(c.id)}
+                    disabled={saving}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              {editingId === c.id && (
+                <CardContent className="space-y-4 border-t border-slate-800 pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400">Name</label>
+                      <Input
+                        value={formState.name || ""}
+                        onChange={(e) => handleChange("name", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400">Type</label>
+                      <Input
+                        value={formState.type || ""}
+                        onChange={(e) => handleChange("type", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400">Capacity</label>
+                      <Input
+                        type="number"
+                        value={formState.capacity ?? 4}
+                        onChange={(e) => handleChange("capacity", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400">Luggage Capacity</label>
+                      <Input
+                        type="number"
+                        value={formState.luggage_capacity ?? 2}
+                        onChange={(e) =>
+                          handleChange("luggage_capacity", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400">Base Fare</label>
+                      <Input
+                        type="number"
+                        value={formState.base_fare ?? 0}
+                        onChange={(e) => handleChange("base_fare", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400">Per Km Rate</label>
+                      <Input
+                        type="number"
+                        value={formState.per_km_rate ?? 0}
+                        onChange={(e) => handleChange("per_km_rate", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400">Main Image URL</label>
+                      <Input
+                        value={formState.main_image_url || ""}
+                        onChange={(e) =>
+                          handleChange("main_image_url", e.target.value)
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={uploadingImage}
+                        onClick={() => {
+                          const input = document.createElement("input")
+                          input.type = "file"
+                          input.accept = "image/*"
+                          input.onchange = (e: any) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleImageUpload(file)
+                          }
+                          input.click()
+                        }}
+                        className="mt-1 h-8 text-xs flex items-center gap-2"
+                      >
+                        <UploadCloud className="w-3 h-3" />
+                        {uploadingImage ? "Uploading..." : "Upload Image"}
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400">Status</label>
+                      <Input
+                        value={formState.status || "active"}
+                        onChange={(e) => handleChange("status", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={cancelEdit}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={saveCab}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+
+          {editingId === "new" && (
+            <Card className="bg-slate-900/60 border-slate-800 text-slate-50">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">
+                  New Cab
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-400">Name</label>
+                    <Input
+                      value={formState.name || ""}
+                      onChange={(e) => handleChange("name", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-400">Type</label>
+                    <Input
+                      value={formState.type || ""}
+                      onChange={(e) => handleChange("type", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-400">Capacity</label>
+                    <Input
+                      type="number"
+                      value={formState.capacity ?? 4}
+                      onChange={(e) => handleChange("capacity", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-400">Luggage Capacity</label>
+                    <Input
+                      type="number"
+                      value={formState.luggage_capacity ?? 2}
+                      onChange={(e) =>
+                        handleChange("luggage_capacity", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-400">Base Fare</label>
+                    <Input
+                      type="number"
+                      value={formState.base_fare ?? 0}
+                      onChange={(e) => handleChange("base_fare", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-400">Per Km Rate</label>
+                    <Input
+                      type="number"
+                      value={formState.per_km_rate ?? 0}
+                      onChange={(e) => handleChange("per_km_rate", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-400">Main Image URL</label>
+                    <Input
+                      value={formState.main_image_url || ""}
+                      onChange={(e) =>
+                        handleChange("main_image_url", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-slate-400">Status</label>
+                    <Input
+                      value={formState.status || "active"}
+                      onChange={(e) => handleChange("status", e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelEdit}
+                    disabled={saving}
                   >
                     Cancel
                   </Button>
-                )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* List */}
-        <Card className="lg:col-span-2 border-slate-200/60 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-slate-900">All Cabs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-              </div>
-            ) : cabs.length === 0 ? (
-              <p className="text-slate-500 text-center py-10">No cabs yet. Add your first cab on the left.</p>
-            ) : (
-              <div className="space-y-3">
-                {cabs.map((cab) => (
-                  <div
-                    key={cab.id}
-                    className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200/70 bg-slate-50/80 hover:bg-white transition-colors"
+                  <Button
+                    size="sm"
+                    onClick={saveCab}
+                    disabled={saving}
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-900">
-                          {cab.name}
-                        </span>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-white uppercase tracking-wide">
-                          {cab.slug}
-                        </span>
-                        {cab.status === "inactive" && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-                      {cab.description && (
-                        <p className="text-xs text-slate-600 line-clamp-2">
-                          {cab.description}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {cab.models && cab.models.length > 0 && (
-                          <span className="text-[11px] text-slate-700">
-                            Models: {cab.models.join(", ")}
-                          </span>
-                        )}
-                        {cab.capacity_min && cab.capacity_max && (
-                          <span className="text-[11px] text-slate-700">
-                            • {cab.capacity_min}-{cab.capacity_max} persons
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 md:self-start">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(cab)}
-                        className="rounded-full h-8 px-3"
-                      >
-                        <Pencil className="w-3 h-3 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(cab)}
-                        className="rounded-full h-8 px-3 text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-3 h-3 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Save
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   )
 }

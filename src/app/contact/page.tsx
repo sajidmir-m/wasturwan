@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { MapPin, Phone, Mail, Sparkles, Send, Loader2, CheckCircle } from "lucide-react"
 import { motion } from "framer-motion"
-import { createContact } from "@/lib/actions/contacts"
 
 export default function ContactPage() {
   const [loading, setLoading] = useState(false)
@@ -20,25 +19,29 @@ export default function ContactPage() {
     setSuccess(false)
 
     const formData = new FormData(e.currentTarget)
-    const contactData = {
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-      phone: formData.get('phone') as string,
-      subject: formData.get('subject') as string,
-      message: formData.get('message') as string
+    const name = (formData.get('name') as string) || ""
+    const email = (formData.get('email') as string) || ""
+    const phone = (formData.get('phone') as string) || ""
+    const subject = (formData.get('subject') as string) || "Website Contact"
+    const message = (formData.get('message') as string) || ""
+
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      setError("Please fill in required fields (name, email, message).")
+      setLoading(false)
+      return
     }
 
-    const { error: actionError } = await createContact(contactData)
-    
-    if (actionError) {
-      setError(actionError)
-      setLoading(false)
-    } else {
-      setSuccess(true)
-      setLoading(false)
-      e.currentTarget.reset()
-      setTimeout(() => setSuccess(false), 5000)
-    }
+    // No backend: open user's email client (mailto) with prefilled message
+    const emailTo = "wasturwantravels@gmail.com"
+    const mailtoUrl = `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
+      `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\n\nMessage:\n${message}`
+    )}`
+
+    window.location.href = mailtoUrl
+    setSuccess(true)
+    setLoading(false)
+    e.currentTarget.reset()
+    setTimeout(() => setSuccess(false), 5000)
   }
 
   return (

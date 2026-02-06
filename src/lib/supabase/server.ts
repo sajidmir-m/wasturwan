@@ -1,6 +1,16 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import dns from 'node:dns'
+
+// Force IPv4 for Supabase connection stability in Node 18+ environments (prevents fetch failed / ECONNRESET)
+try {
+  if (dns && typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first')
+  }
+} catch (e) {
+  // Ignore if not supported
+}
 
 /**
  * Creates a Supabase client with session management for authenticated/admin operations.
@@ -99,5 +109,3 @@ export function createAnonymousClient() {
   // The storage always returns null, so no session can exist
   return client
 }
-
-
