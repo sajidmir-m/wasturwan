@@ -10,7 +10,7 @@ const experiences = [
     title: "Dal Lake Shikara Experience",
     description:
       "Glide across Dal Lake at sunrise, stay in heritage houseboats, and watch the mountains glow in golden light.",
-    image: "/dallake.png",
+    image: "/dal.png",
     place: "Srinagar",
   },
   {
