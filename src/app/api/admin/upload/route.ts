@@ -7,19 +7,18 @@ export async function POST(req: NextRequest) {
 
     const bucket = String(formData.get("bucket") || "")
     const folder = String(formData.get("folder") || "admin")
-    const file = formData.get("file")
+    const file = formData.get("file") as File | null
 
     if (!bucket) {
       return NextResponse.json({ error: "Missing bucket" }, { status: 400 })
     }
-    if (!file || typeof file === "string") {
+    if (!file) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 })
     }
 
     const supabase = createAdminClient()
 
-    // @ts-expect-error - File is the standard web File in Next route runtime
-    const filename = `${Date.now()}-${file.name}` as string
+    const filename = `${Date.now()}-${file.name}`
     const path = `${folder}/${filename}`
 
     const { error } = await supabase.storage.from(bucket).upload(path, file, {
