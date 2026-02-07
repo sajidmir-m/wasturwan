@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback, memo } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { motion } from "framer-motion"
+import { motion, Variants } from "framer-motion"
 import { MapPin, ArrowRight, Sparkles, Compass } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
@@ -88,7 +88,7 @@ export default function IntroPage() {
     }
   }, [])
 
-  const containerVariants = useMemo(() => ({
+  const containerVariants: Variants = useMemo(() => ({
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -99,14 +99,13 @@ export default function IntroPage() {
     },
   }), [])
 
-  const itemVariants = useMemo(() => ({
+  const itemVariants: Variants = useMemo(() => ({
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.4,
-        ease: "easeOut",
       },
     },
   }), [])
@@ -132,7 +131,7 @@ export default function IntroPage() {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 0.8 }}
             className="max-w-4xl mx-auto text-center"
           >
             {/* Logo/Brand */}

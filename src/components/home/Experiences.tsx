@@ -50,7 +50,7 @@ export default function Experiences() {
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.25 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
+          transition={{ duration: 0.45 }}
           className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8 mb-12"
         >
           <div className="max-w-2xl">
@@ -102,7 +102,7 @@ export default function Experiences() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.3, delay: index * 0.03, ease: "easeOut" }}
+              transition={{ duration: 0.3, delay: index * 0.03 }}
               className="group bg-white/5 border border-white/10 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-blue-300/60 transition-all duration-150 flex flex-col will-change-transform"
             >
               <div className="relative h-52 w-full overflow-hidden">

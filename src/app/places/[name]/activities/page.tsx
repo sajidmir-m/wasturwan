@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { motion } from "framer-motion"
+import { motion, Variants } from "framer-motion"
 import { ArrowLeft, Camera, Mountain, Ship, Compass, TreePine, MapPin, Sparkles } from "lucide-react"
 
 type Activity = {
@@ -66,7 +66,7 @@ export default function ActivitiesPage() {
   const activities = PLACE_ACTIVITIES[placeName] || []
   const placeImage = PLACE_IMAGES[placeName] || "/1767803609020.jpeg"
 
-  const containerVariants = useMemo(() => ({
+  const containerVariants: Variants = useMemo(() => ({
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -76,7 +76,7 @@ export default function ActivitiesPage() {
     },
   }), [])
 
-  const itemVariants = useMemo(() => ({
+  const itemVariants: Variants = useMemo(() => ({
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
