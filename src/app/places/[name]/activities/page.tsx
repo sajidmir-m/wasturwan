@@ -1,12 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { ArrowLeft, Camera, Mountain, Ship, Compass, TreePine, MapPin, Sparkles } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
 
 type Activity = {
   title: string
@@ -67,7 +66,7 @@ export default function ActivitiesPage() {
   const activities = PLACE_ACTIVITIES[placeName] || []
   const placeImage = PLACE_IMAGES[placeName] || "/1767803609020.jpeg"
 
-  const containerVariants = {
+  const containerVariants = useMemo(() => ({
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -75,9 +74,9 @@ export default function ActivitiesPage() {
         staggerChildren: 0.1,
       },
     },
-  }
+  }), [])
 
-  const itemVariants = {
+  const itemVariants = useMemo(() => ({
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
@@ -87,7 +86,7 @@ export default function ActivitiesPage() {
         ease: "easeOut",
       },
     },
-  }
+  }), [])
 
   if (activities.length === 0) {
     return (
