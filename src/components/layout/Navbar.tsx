@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/", label: "Home" },
+  { href: "/home", label: "Home" },
   { href: "/packages", label: "Packages" },
   { href: "/services", label: "Services" },
   { href: "/cabs", label: "Cabs" },
@@ -25,14 +25,21 @@ export default function Navbar() {
   const pathname = usePathname()
 
   useEffect(() => {
+    let ticking = false
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50)
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrolled(window.scrollY > 50)
+          ticking = false
+        })
+        ticking = true
+      }
     }
-    window.addEventListener("scroll", handleScroll)
+    window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  if (pathname?.startsWith("/admin")) return null
+  if (pathname?.startsWith("/admin") || pathname === "/intro") return null
 
   return (
     <>
@@ -41,13 +48,13 @@ export default function Navbar() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.35, ease: "easeOut" }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 md:px-8",
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-200 px-4 md:px-8 will-change-transform",
           scrolled ? "pt-3" : "pt-5"
         )}
       >
         <div
           className={cn(
-            "max-w-7xl mx-auto rounded-2xl backdrop-blur-xl border shadow-lg transition-all duration-300",
+            "max-w-7xl mx-auto rounded-2xl backdrop-blur-xl border shadow-lg transition-all duration-200 will-change-transform",
             scrolled
               ? "bg-white/95 py-2.5 px-5 border-slate-200/60"
               : "bg-white/70 py-3.5 px-7 border-slate-200/40"
@@ -55,7 +62,7 @@ export default function Navbar() {
         >
           <div className="flex items-center justify-between gap-4">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-3 group">
+            <Link href="/home" className="flex items-center space-x-3 group">
               <div className="relative w-11 h-11 rounded-2xl overflow-hidden bg-white shadow-lg border border-slate-200 group-hover:scale-105 transition">
                 <Image
                   src="/log.jpeg"
@@ -136,7 +143,7 @@ export default function Navbar() {
         </div>
       </motion.nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Redesigned */}
       <AnimatePresence>
         {isOpen && (
           <>
@@ -144,7 +151,7 @@ export default function Navbar() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
               onClick={() => setIsOpen(false)}
             />
 
@@ -152,36 +159,73 @@ export default function Navbar() {
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 z-50 w-80 bg-white shadow-2xl"
+              transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
+              className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-gradient-to-b from-white to-slate-50 shadow-2xl will-change-transform"
             >
-              <div className="p-6 border-b">
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-serif font-bold">
-                    Wasturwan<span className="text-blue-600"> Travels</span>
-                  </span>
-                  <button onClick={() => setIsOpen(false)}>
+              {/* Header */}
+              <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-white shadow-lg">
+                      <Image
+                        src="/log.jpeg"
+                        alt="Wasturwan Travels"
+                        fill
+                        className="object-contain p-1.5"
+                      />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-serif font-bold">Wasturwan</h3>
+                      <p className="text-xs text-blue-100">Travels</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                  >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
-              <div className="p-6 space-y-2">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className="block text-lg px-4 py-3 rounded-xl hover:bg-blue-50"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+              {/* Navigation Items */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-4 space-y-1">
+                  {navItems.map((item, index) => (
+                    <motion.div
+                      key={item.href}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Link
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={cn(
+                          "block px-4 py-3.5 rounded-xl text-base font-medium transition-all",
+                          pathname === item.href
+                            ? "bg-blue-50 text-blue-700 font-semibold"
+                            : "text-slate-700 hover:bg-slate-100"
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
 
-                <div className="pt-6 border-t space-y-3">
-                  {/* Mobile Call – Silver */}
-                  <a href="tel:+917006594976">
-                    <Button className="w-full py-3 rounded-xl bg-gradient-to-br from-slate-200 to-slate-100 text-black border border-slate-300 hover:from-slate-300 hover:to-slate-200 shadow-lg flex gap-2 justify-center">
+                {/* Quick Actions */}
+                <div className="p-4 pt-6 border-t border-slate-200 space-y-3">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 mb-2">
+                    Quick Actions
+                  </p>
+                  
+                  <a
+                    href="tel:+917006594976"
+                    onClick={() => setIsOpen(false)}
+                    className="block"
+                  >
+                    <Button className="w-full py-3.5 rounded-xl bg-gradient-to-br from-slate-200 to-slate-100 text-black border border-slate-300 hover:from-slate-300 hover:to-slate-200 shadow-md flex gap-2 justify-center items-center">
                       <Phone className="w-4 h-4" />
                       Call Us
                     </Button>
@@ -191,17 +235,22 @@ export default function Navbar() {
                     href="https://wa.me/917006594976"
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => setIsOpen(false)}
+                    className="block"
                   >
-                    <Button className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg flex gap-2 justify-center">
+                    <Button className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md flex gap-2 justify-center items-center">
                       <MessageCircle className="w-4 h-4" />
                       WhatsApp
                     </Button>
                   </a>
 
-                  {/* Mobile Book – Silver */}
-                  <Link href="/book">
-                    <Button className="w-full py-4 text-lg rounded-xl bg-gradient-to-br from-slate-200 to-slate-100 text-black border border-slate-300 hover:from-slate-300 hover:to-slate-200 shadow-lg">
-                      Plan Your Trip
+                  <Link
+                    href="/book"
+                    onClick={() => setIsOpen(false)}
+                    className="block"
+                  >
+                    <Button className="w-full py-4 text-base font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg">
+                      Book Your Trip
                     </Button>
                   </Link>
                 </div>

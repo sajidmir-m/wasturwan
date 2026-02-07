@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Lato } from "next/font/google";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import ConditionalLayout from "@/components/layout/ConditionalLayout";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -33,11 +32,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfair.variable} ${lato.variable}`}>
       <body className="font-sans antialiased min-h-screen flex flex-col bg-white text-slate-900">
-        <Navbar />
-        <main className="flex-grow pt-24">
+        <ConditionalLayout>
           {children}
-        </main>
-        <Footer />
+        </ConditionalLayout>
       </body>
     </html>
   );

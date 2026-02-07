@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { MapPin, Sparkles } from "lucide-react"
+import { MapPin, Sparkles, Compass } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 type Place = {
@@ -136,10 +136,11 @@ export default function PlacesPage() {
                   {place.description}
                 </p>
                 <Link
-                  href={`/packages?place=${encodeURIComponent(place.name)}`}
-                  className="inline-flex items-center justify-center text-sm font-semibold text-blue-700 hover:text-blue-800 mt-2"
+                  href={`/places/${encodeURIComponent(place.name)}/activities`}
+                  className="inline-flex items-center justify-center text-sm font-semibold text-blue-700 hover:text-blue-800 mt-2 transition-colors group"
                 >
-                  View packages for {place.name}
+                  View Activities
+                  <Compass className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
             </motion.div>

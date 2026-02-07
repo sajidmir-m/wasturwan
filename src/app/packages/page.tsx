@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -33,19 +34,29 @@ const FALLBACK_IMAGES: Record<string, string> = {
 }
 
 export default function PackagesPage() {
+  const searchParams = useSearchParams()
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
+  const filterPlace = searchParams.get("place")
 
   useEffect(() => {
     const loadPackages = async () => {
       try {
         const supabase = createClient()
-        const { data, error } = await supabase
+        let query = supabase
           .from("packages")
           .select(
             "id, title, location, category, price, days, nights, duration, description, main_image_url, featured",
           )
           .eq("status", "active")
+
+        // Filter by place if provided
+        if (filterPlace) {
+          // Check if location contains the place name (case-insensitive)
+          query = query.ilike("location", `%${filterPlace}%`)
+        }
+
+        const { data, error } = await query
           .order("featured", { ascending: false })
           .order("created_at", { ascending: false })
 
@@ -78,7 +89,7 @@ export default function PackagesPage() {
     }
 
     loadPackages()
-  }, [])
+  }, [filterPlace])
 
   const list = packages
 
@@ -92,12 +103,23 @@ export default function PackagesPage() {
           className="text-center mb-10"
         >
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 mb-3">
-            Tour Packages
+            {filterPlace ? `Tour Packages for ${filterPlace}` : "Tour Packages"}
           </h1>
           <p className="text-slate-600 max-w-2xl mx-auto">
-            Curated journeys across Kashmir, Jammu and Ladakh. All packages are fully customisable
-            as per your dates and budget.
+            {filterPlace 
+              ? `Curated journeys in ${filterPlace}. All packages are fully customisable as per your dates and budget.`
+              : "Curated journeys across Kashmir, Jammu and Ladakh. All packages are fully customisable as per your dates and budget."}
           </p>
+          {filterPlace && (
+            <div className="mt-4">
+              <a
+                href="/packages"
+                className="text-sm text-blue-600 hover:text-blue-700 underline"
+              >
+                View all packages
+              </a>
+            </div>
+          )}
         </motion.div>
 
         {loading && list.length === 0 && (

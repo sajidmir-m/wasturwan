@@ -93,8 +93,9 @@ export default function FeaturedPackages() {
             <motion.div
               key={pkg.id}
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.05 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.3, delay: index * 0.03 }}
             >
               <Card className="h-full border-slate-200/70 shadow-sm hover:shadow-lg transition-shadow duration-300">
                 <CardHeader className="pb-3">

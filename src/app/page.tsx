@@ -1,17 +1,39 @@
-import Hero from "@/components/home/Hero"
-import Experiences from "@/components/home/Experiences"
-import FeaturedPackages from "@/components/home/FeaturedPackages"
-import WhyChooseUs from "@/components/home/WhyChooseUs"
-import Testimonials from "@/components/home/Testimonials"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import IntroPage from "@/components/home/IntroPage"
 
 export default function Home() {
-  return (
-    <div className="flex flex-col min-h-screen">
-      <Hero />
-      <Experiences />
-      <FeaturedPackages />
-      <WhyChooseUs />
-      <Testimonials />
-    </div>
-  )
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    // Check if user has visited before (using sessionStorage)
+    if (typeof window !== 'undefined') {
+      const hasVisited = sessionStorage.getItem("hasVisited")
+      
+      if (hasVisited) {
+        // Returning visitor - redirect to main home
+        router.replace("/home")
+      }
+    }
+  }, [router])
+
+  // Show intro page on first visit, or while checking
+  if (!mounted) {
+    return <IntroPage />
+  }
+
+  // Check again after mount
+  if (typeof window !== 'undefined') {
+    const hasVisited = sessionStorage.getItem("hasVisited")
+    
+    if (!hasVisited) {
+      return <IntroPage />
+    }
+  }
+
+  return null
 }

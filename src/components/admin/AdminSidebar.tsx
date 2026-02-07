@@ -23,9 +23,14 @@ export default function AdminSidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
-  // Close sidebar when route changes on mobile
+  // Close sidebar when route changes on mobile (with slight delay to prevent lag)
   useEffect(() => {
-    setIsOpen(false)
+    if (isOpen) {
+      // Use requestAnimationFrame for smoother transition
+      requestAnimationFrame(() => {
+        setIsOpen(false)
+      })
+    }
   }, [pathname])
 
   const handleLogout = async (e: React.FormEvent) => {
@@ -52,7 +57,9 @@ export default function AdminSidebar() {
     <>
       {/* Mobile Menu Button */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          requestAnimationFrame(() => setIsOpen(true))
+        }}
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-800 text-white rounded-lg shadow-lg hover:bg-slate-700 transition-colors"
         aria-label="Open menu"
       >
@@ -62,21 +69,24 @@ export default function AdminSidebar() {
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity duration-200"
           onClick={() => setIsOpen(false)}
+          style={{ willChange: 'opacity' }}
         />
       )}
 
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed md:static inset-y-0 left-0 z-40 flex flex-col w-72 bg-gradient-to-b from-slate-900 to-slate-800 text-white min-h-screen border-r border-slate-700/50 transform transition-transform duration-300 ease-in-out",
+          "fixed md:static inset-y-0 left-0 z-40 flex flex-col w-72 bg-gradient-to-b from-slate-900 to-slate-800 text-white min-h-screen border-r border-slate-700/50 transition-transform duration-200 ease-out will-change-transform",
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
         {/* Mobile Close Button */}
         <button
-          onClick={() => setIsOpen(false)}
+          onClick={() => {
+            requestAnimationFrame(() => setIsOpen(false))
+          }}
           className="md:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
           aria-label="Close menu"
         >
@@ -104,9 +114,11 @@ export default function AdminSidebar() {
               <Link 
                 key={item.href} 
                 href={item.href}
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  requestAnimationFrame(() => setIsOpen(false))
+                }}
                 className={cn(
-                  "flex items-center px-4 py-3 rounded-xl transition-all duration-200 group",
+                  "flex items-center px-4 py-3 rounded-xl transition-colors duration-150 group",
                   isActive 
                     ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30" 
                     : "text-slate-300 hover:bg-slate-800/50 hover:text-white"

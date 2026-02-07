@@ -102,15 +102,17 @@ export default function Experiences() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.4, delay: index * 0.05, ease: "easeOut" }}
-              className="group bg-white/5 border border-white/10 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-blue-300/60 transition-all duration-200 flex flex-col"
+              transition={{ duration: 0.3, delay: index * 0.03, ease: "easeOut" }}
+              className="group bg-white/5 border border-white/10 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-blue-300/60 transition-all duration-150 flex flex-col will-change-transform"
             >
               <div className="relative h-52 w-full overflow-hidden">
                 <Image
                   src={exp.image}
                   alt={exp.title}
                   fill
-                  className="object-cover group-hover:scale-110 transition-transform duration-700"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading={index < 2 ? "eager" : "lazy"}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                 <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">

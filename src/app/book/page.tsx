@@ -44,7 +44,7 @@ export default function BookPage() {
       } catch (err) {
         console.error("Error loading packages for booking form", err)
       } finally {
-        setFormLoading(false)
+    setFormLoading(false)
       }
     }
 
@@ -60,7 +60,7 @@ export default function BookPage() {
     const formData = new FormData(form)
     const currentPackageId = formData.get("packageId") as string
     const selectedPackage = packages.find((p) => p.id === currentPackageId)
-    const selectedPackageLabel = selectedPackage?.title || ""
+    const selectedPackageLabel = selectedPackage?.title || (currentPackageId === "" ? "Custom itinerary / Not listed" : "")
     const travelDate = formData.get("date") as string
     const persons = Number(formData.get("persons") || 1)
     const baseMessage = (formData.get("message") as string) || ""
@@ -69,7 +69,7 @@ export default function BookPage() {
     const email = formData.get("email") as string
     const phone = formData.get("phone") as string
 
-    // Validate required fields
+    // Validate required fields (packageId is optional - can be empty for custom itinerary)
     if (!name || !email || !phone || !travelDate || !persons) {
       setError("Please fill in all required fields")
       return
@@ -86,7 +86,7 @@ export default function BookPage() {
           phone,
           date: travelDate || new Date().toISOString().slice(0, 10),
           persons: isNaN(persons) || persons <= 0 ? 1 : persons,
-          packageId: currentPackageId || null,
+          packageId: currentPackageId && currentPackageId !== "custom" ? currentPackageId : null,
           message: baseMessage || undefined,
         }),
       })
@@ -99,7 +99,7 @@ export default function BookPage() {
           name,
           email,
           phone,
-          subject: currentPackageId ? "Package booking enquiry" : "Custom booking enquiry",
+          subject: currentPackageId && currentPackageId !== "custom" ? "Package booking enquiry" : "Custom booking enquiry",
           message:
             baseMessage ||
             `Booking enquiry for ${selectedPackageLabel || "custom itinerary"} on ${travelDate} for ${persons} person(s).`,
@@ -245,7 +245,7 @@ export default function BookPage() {
                         {pkg.title}
                       </option>
                     ))}
-                    <option value="">Custom itinerary / Not listed</option>
+                    <option value="custom">Custom itinerary / Not listed</option>
                   </select>
                 ) : (
                   <select
@@ -254,8 +254,7 @@ export default function BookPage() {
                     value={selectedPackageId}
                     onChange={(e) => setSelectedPackageId(e.target.value)}
                   >
-                    <option value="">No packages available - Custom booking</option>
-                    <option value="">Custom itinerary / Not listed</option>
+                    <option value="custom">Custom itinerary / Not listed</option>
                   </select>
                 )}
               </div>
