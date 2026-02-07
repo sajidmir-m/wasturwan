@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -33,7 +33,7 @@ const FALLBACK_IMAGES: Record<string, string> = {
   "Kashmir & Ladakh Combo": "/Lehladakh.jpeg",
 }
 
-export default function PackagesPage() {
+function PackagesContent() {
   const searchParams = useSearchParams()
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
@@ -214,5 +214,21 @@ export default function PackagesPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PackagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-white to-slate-50/50 py-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <p className="text-slate-500">Loading packages…</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <PackagesContent />
+    </Suspense>
   )
 }
