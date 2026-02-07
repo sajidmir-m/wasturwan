@@ -29,7 +29,7 @@ export default function Navbar() {
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          setScrolled(window.scrollY > 50)
+      setScrolled(window.scrollY > 50)
           ticking = false
         })
         ticking = true
@@ -198,20 +198,20 @@ export default function Navbar() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <Link
-                        href={item.href}
-                        onClick={() => setIsOpen(false)}
+                  <Link
+                    href={item.href}
+                    onClick={() => setIsOpen(false)}
                         className={cn(
                           "block px-4 py-3.5 rounded-xl text-base font-medium transition-all",
                           pathname === item.href
                             ? "bg-blue-50 text-blue-700 font-semibold"
                             : "text-slate-700 hover:bg-slate-100"
                         )}
-                      >
-                        {item.label}
-                      </Link>
+                  >
+                    {item.label}
+                  </Link>
                     </motion.div>
-                  ))}
+                ))}
                 </div>
 
                 {/* Quick Actions */}
